@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ゲーム - リイト</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; color: #1f2937; line-height: 1.6; }
+
+    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background-color: rgba(255, 255, 255, 0.95); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .logo { font-size: 1.25rem; font-weight: 700; color: #111827; }
+    nav ul { display: flex; list-style: none; gap: 16px; flex-wrap: wrap; }
+    nav a { text-decoration: none; color: #4b5563; font-size: 0.9rem; font-weight: 500; }
+    nav a:hover { color: #111827; }
+
+    .hero { height: 140px; background: linear-gradient(135deg, #4d6682 0%, #304352 100%); display: flex; justify-content: center; align-items: center; }
+    .hero h1 { color: #ffffff; font-size: 2.2rem; font-weight: 700; }
+
+    .games-container { max-width: 1000px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; justify-items: center; }
+    .game-card { width: 100%; display: flex; justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">リイト</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">ホーム</a></li>
+        <li><a href="3d.html">3Dモデルづくり</a></li>
+        <li><a href="game.html">ゲーム</a></li>
+        <li><a href="meiro.html">MEIRO</a></li>
+        <li><a href="browser.html">ウェブブラウザ</a></li>
+        <li><a href="sequencer.html">簡易シーケンサー</a></li>
+        <li><a href="synth.html">シンセサイザー</a></li>
+        <li><a href="paint.html">お絵かき</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>ミニゲーム集</h1>
+  </div>
+
+  <div class="games-container">
+
+    <!-- トマト連打 -->
+    <div class="game-card">
+      <div style="text-align: center; font-family: sans-serif; background: #FFF5F5; padding: 20px; border-radius: 16px; border: 3px solid #FEB2B2; width: 100%; max-width: 350px;">
+        <h2 style="color: #E53E3E; margin-top: 0;">🍅 トマト連打ゲーム</h2>
+        <div style="font-size: 18px; margin-bottom: 10px; font-weight: bold;">
+          タイム: <span id="time" style="color: #DD6B20;">10</span>s | スコア: <span id="score" style="color: #319795;">0</span>
+        </div>
+        <button id="clickBtn" onclick="tap()" style="font-size: 60px; background: none; border: none; cursor: pointer; transition: transform 0.05s; user-select: none; outline: none;">🍅</button>
+        <div style="margin-top: 15px;">
+          <button id="startBtn" onclick="startGame()" style="background: #319795; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 20px; cursor: pointer;">スタート！</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 絵合わせ -->
+    <div class="game-card">
+      <div style="text-align: center; font-family: sans-serif; background: #F0FFF4; padding: 20px; border-radius: 16px; border: 3px solid #9AE6B4; width: 100%; max-width: 320px;">
+        <h2 style="color: #2F855A; margin-top: 0;">🎴 絵合わせゲーム</h2>
+        <div id="grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px;"></div>
+        <button onclick="initGame()" style="background: #2F855A; color: white; border: none; padding: 8px 16px; font-size: 14px; font-weight: bold; border-radius: 20px; cursor: pointer;">リセット</button>
+      </div>
+    </div>
+
+    <!-- スネークゲーム -->
+    <div class="game-card">
+      <div style="text-align: center; font-family: sans-serif; background: #1A202C; color: white; padding: 15px; border-radius: 16px; width: 100%; max-width: 320px;">
+        <h3 style="margin: 5px 0;">🐍 スネークゲーム</h3>
+        <div style="font-size: 14px; margin-bottom: 8px;">矢印キーで移動 / スコア: <span id="snakeScore">0</span></div>
+        <canvas id="gameCanvas" width="280" height="280" style="background: #2D3748; border-radius: 8px;"></canvas>
+      </div>
+    </div>
+
+    <!-- モンスター叩き -->
+    <div class="game-card">
+      <div style="background: #ffffff; border: 3px solid #dcfce7; border-radius: 20px; padding: 20px; text-align: center; position: relative; overflow: hidden; width: 100%; max-width: 360px;">
+        <div style="font-size: 1.3rem; font-weight: 800; color: #15803d; margin-bottom: 8px;">👾 モンスターたたき</div>
+        <div id="comboBadge" style="height: 20px; font-size: 0.85rem; font-weight: 800; color: #f59e0b; visibility: hidden;">0 COMBO!</div>
+        <div style="display: flex; justify-content: space-around; background: #f1f5f9; padding: 8px; border-radius: 12px; margin: 8px 0; font-weight: 700; font-size: 0.85rem;">
+          <div>タイム: <span id="mTimer">30s</span></div>
+          <div>スコア: <span id="mScore">0</span></div>
+        </div>
+        <div id="mGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0;"></div>
+        <button id="mStartBtn" onclick="startMonsterGame()" style="background: #22c55e; color: white; border: none; padding: 10px 24px; font-size: 1rem; font-weight: 700; border-radius: 50px; cursor: pointer;">スタート！</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* トマト連打スクリプト */
+    let score = 0, timeLeft = 10, timer = null, isPlaying = false;
+    function startGame() {
+      score = 0; timeLeft = 10; isPlaying = true;
+      document.getElementById('score').innerText = score;
+      document.getElementById('time').innerText = timeLeft;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startBtn').style.opacity = '0.5';
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('time').innerText = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timer); isPlaying = false;
+          alert(`タイムアップ！記録: ${score} 回！🎉`);
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('startBtn').style.opacity = '1';
+        }
+      }, 1000);
+    }
+    function tap() {
+      if (!isPlaying) return;
+      score++; document.getElementById('score').innerText = score;
+      const btn = document.getElementById('clickBtn');
+      btn.style.transform = 'scale(0.8)';
+      setTimeout(() => btn.style.transform = 'scale(1)', 50);
+    }
+
+    /* 絵合わせスクリプト */
+    const emojis = ['🐱', '🐶', '🐰', '🦊', '🐱', '🐶', '🐰', '🦊'];
+    let flipped = [], matched = 0;
+    function initGame() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = ''; flipped = []; matched = 0;
+      const shuffled = [...emojis].sort(() => Math.random() - 0.5);
+      shuffled.forEach((emoji, i) => {
+        const card = document.createElement('button');
+        card.dataset.emoji = emoji; card.dataset.index = i; card.innerText = '❓';
+        card.style.cssText = 'font-size: 30px; height: 60px; background: white; border: 2px solid #68D391; border-radius: 8px; cursor: pointer;';
+        card.onclick = () => flipCard(card);
+        grid.appendChild(card);
+      });
+    }
+    function flipCard(card) {
+      if (flipped.length < 2 && !card.disabled && !flipped.includes(card)) {
+        card.innerText = card.dataset.emoji; flipped.push(card);
+        if (flipped.length === 2) {
+          if (flipped[0].dataset.emoji === flipped[1].dataset.emoji) {
+            flipped.forEach(c => c.disabled = true);
+            matched += 2; flipped = [];
+            if (matched === emojis.length) setTimeout(() => alert('クリア！素晴らしい！🎉'), 300);
+          } else {
+            setTimeout(() => { flipped.forEach(c => c.innerText = '❓'); flipped = []; }, 800);
+          }
+        }
+      }
+    }
+    initGame();
+
+    /* スネークスクリプト */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const grid = 14;
+    let snake = [{x: 140, y: 140}], dx = grid, dy = 0, food = {x: 70, y: 70}, snakeScore = 0;
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -grid; }
+      if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = grid; }
+      if (e.key === 'ArrowLeft' && dx === 0) { dx = -grid; dy = 0; }
+      if (e.key === 'ArrowRight' && dx === 0) { dx = grid; dy = 0; }
+    });
+    function gameLoop() {
+      const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height ||
+          snake.some(s => s.x === head.x && s.y === head.y)) {
+        snake = [{x: 140, y: 140}]; dx = grid; dy = 0; snakeScore = 0;
+        document.getElementById('snakeScore').innerText = snakeScore;
+        return setTimeout(gameLoop, 150);
+      }
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) {
+        snakeScore += 10; document.getElementById('snakeScore').innerText = snakeScore;
+        food = { x: Math.floor(Math.random() * (canvas.width / grid)) * grid, y: Math.floor(Math.random() * (canvas.height / grid)) * grid };
+      } else { snake.pop(); }
+      ctx.fillStyle = '#2D3748'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#48BB78'; snake.forEach(s => ctx.fillRect(s.x, s.y, grid-1, grid-1));
+      ctx.fillStyle = '#F56565'; ctx.fillRect(food.x, food.y, grid-1, grid-1);
+      setTimeout(gameLoop, 120);
+    }
+    gameLoop();
+
+    /* モンスターたたき（簡易調整版） */
+    let mScore = 0, mTimeLeft = 30, mTimer = null, mPlaying = false;
+    const mGrid = document.getElementById('mGrid');
+    const holes = [];
+    for (let i = 0; i < 9; i++) {
+      const h = document.createElement('button');
+      h.style.cssText = 'height: 60px; font-size: 2rem; background: #e2e8f0; border: 2px solid #cbd5e1; border-radius: 50%; cursor: pointer;';
+      h.innerText = '🕳️';
+      h.onclick = () => {
+        if (mPlaying && h.innerText === '👾') {
+          mScore += 100; document.getElementById('mScore').innerText = mScore;
+          h.innerText = '💥'; setTimeout(() => h.innerText = '🕳️', 200);
+        }
+      };
+      mGrid.appendChild(h); holes.push(h);
+    }
+    function startMonsterGame() {
+      mScore = 0; mTimeLeft = 30; mPlaying = true;
+      document.getElementById('mScore').innerText = mScore;
+      document.getElementById('mTimer').innerText = `${mTimeLeft}s`;
+      document.getElementById('mStartBtn').disabled = true;
+      mTimer = setInterval(() => {
+        mTimeLeft--; document.getElementById('mTimer').innerText = `${mTimeLeft}s`;
+        if (mTimeLeft <= 0) {
+          clearInterval(mTimer); mPlaying = false;
+          alert(`タイムアップ！スコア: ${mScore}`);
+          document.getElementById('mStartBtn').disabled = false;
+        }
+      }, 1000);
+      spawnMonster();
+    }
+    function spawnMonster() {
+      if (!mPlaying) return;
+      const idx = Math.floor(Math.random() * 9);
+      if (holes[idx].innerText === '🕳️') {
+        holes[idx].innerText = '👾';
+        setTimeout(() => { if (holes[idx].innerText === '👾') holes[idx].innerText = '🕳️'; }, 800);
+      }
+      setTimeout(spawnMonster, 600);
+    }
+  </script>
+</body>
+</html>
