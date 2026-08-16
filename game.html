@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ゲーム - リイト</title>
+  <title>ゲーム集</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
 <body>
 
   <header>
-    <div class="logo">リイト</div>
+    <div class="logo">Web Games</div>
     <nav>
       <ul>
         <li><a href="index.html">ホーム</a></li>
@@ -57,7 +57,7 @@
         </div>
         <button id="clickBtn" onclick="tap()" style="font-size: 60px; background: none; border: none; cursor: pointer; transition: transform 0.05s; user-select: none; outline: none;">🍅</button>
         <div style="margin-top: 15px;">
-          <button id="startBtn" onclick="startGame()" style="background: #319795; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 20px; cursor: pointer;">スタート！</button>
+          <button id="startBtn" onclick="startTomatoGame()" style="background: #319795; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; border-radius: 20px; cursor: pointer;">スタート！</button>
         </div>
       </div>
     </div>
@@ -84,7 +84,6 @@
     <div class="game-card">
       <div style="background: #ffffff; border: 3px solid #dcfce7; border-radius: 20px; padding: 20px; text-align: center; position: relative; overflow: hidden; width: 100%; max-width: 360px;">
         <div style="font-size: 1.3rem; font-weight: 800; color: #15803d; margin-bottom: 8px;">👾 モンスターたたき</div>
-        <div id="comboBadge" style="height: 20px; font-size: 0.85rem; font-weight: 800; color: #f59e0b; visibility: hidden;">0 COMBO!</div>
         <div style="display: flex; justify-content: space-around; background: #f1f5f9; padding: 8px; border-radius: 12px; margin: 8px 0; font-weight: 700; font-size: 0.85rem;">
           <div>タイム: <span id="mTimer">30s</span></div>
           <div>スコア: <span id="mScore">0</span></div>
@@ -97,34 +96,37 @@
   </div>
 
   <script>
-    /* トマト連打スクリプト */
-    let score = 0, timeLeft = 10, timer = null, isPlaying = false;
-    function startGame() {
-      score = 0; timeLeft = 10; isPlaying = true;
-      document.getElementById('score').innerText = score;
-      document.getElementById('time').innerText = timeLeft;
+    /* トマト連打 */
+    let tScore = 0, tTime = 10, tTimer = null, tPlaying = false;
+    function startTomatoGame() {
+      if (tPlaying) return;
+      tScore = 0; tTime = 10; tPlaying = true;
+      document.getElementById('score').innerText = tScore;
+      document.getElementById('time').innerText = tTime;
       document.getElementById('startBtn').disabled = true;
       document.getElementById('startBtn').style.opacity = '0.5';
-      timer = setInterval(() => {
-        timeLeft--;
-        document.getElementById('time').innerText = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(timer); isPlaying = false;
-          alert(`タイムアップ！記録: ${score} 回！🎉`);
+      
+      clearInterval(tTimer);
+      tTimer = setInterval(() => {
+        tTime--;
+        document.getElementById('time').innerText = tTime;
+        if (tTime <= 0) {
+          clearInterval(tTimer); tPlaying = false;
+          alert(`タイムアップ！記録: ${tScore} 回！🎉`);
           document.getElementById('startBtn').disabled = false;
           document.getElementById('startBtn').style.opacity = '1';
         }
       }, 1000);
     }
     function tap() {
-      if (!isPlaying) return;
-      score++; document.getElementById('score').innerText = score;
+      if (!tPlaying) return;
+      tScore++; document.getElementById('score').innerText = tScore;
       const btn = document.getElementById('clickBtn');
       btn.style.transform = 'scale(0.8)';
       setTimeout(() => btn.style.transform = 'scale(1)', 50);
     }
 
-    /* 絵合わせスクリプト */
+    /* 絵合わせ */
     const emojis = ['🐱', '🐶', '🐰', '🦊', '🐱', '🐶', '🐰', '🦊'];
     let flipped = [], matched = 0;
     function initGame() {
@@ -155,7 +157,7 @@
     }
     initGame();
 
-    /* スネークスクリプト */
+    /* スネーク */
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const grid = 14;
@@ -186,7 +188,7 @@
     }
     gameLoop();
 
-    /* モンスターたたき（簡易調整版） */
+    /* モンスターたたき */
     let mScore = 0, mTimeLeft = 30, mTimer = null, mPlaying = false;
     const mGrid = document.getElementById('mGrid');
     const holes = [];
@@ -203,10 +205,12 @@
       mGrid.appendChild(h); holes.push(h);
     }
     function startMonsterGame() {
+      if (mPlaying) return;
       mScore = 0; mTimeLeft = 30; mPlaying = true;
       document.getElementById('mScore').innerText = mScore;
       document.getElementById('mTimer').innerText = `${mTimeLeft}s`;
       document.getElementById('mStartBtn').disabled = true;
+      clearInterval(mTimer);
       mTimer = setInterval(() => {
         mTimeLeft--; document.getElementById('mTimer').innerText = `${mTimeLeft}s`;
         if (mTimeLeft <= 0) {
