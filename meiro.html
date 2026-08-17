@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D迷路脱出ゲーム - スマホ対応版</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body { font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; overflow: hidden; touch-action: manipulation; }
+    #viewport { width: 100vw; height: 100vh; position: relative; }
+    
+    #ui {
+      position: absolute; top: 12px; left: 12px; z-index: 10;
+      background: rgba(18, 19, 28, 0.85); padding: 10px 14px; border-radius: 8px;
+      border: 1px solid #2d2f45; pointer-events: none;
+    }
+    h1 { font-size: 1rem; color: #f59e0b; margin-bottom: 2px; }
+    #stage-info { font-size: 0.9rem; color: #38bdf8; font-weight: bold; }
+    
+    /* スマホ用コントロールボタン */
+    #touch-controls {
+      position: absolute; bottom: 20px; left: 0; width: 100%;
+      height: 160px; z-index: 15; display: flex; justify-content: space-between;
+      padding: 0 20px; pointer-events: none;
+    }
+    .btn-group { display: flex; gap: 12px; pointer-events: auto; align-items: center; }
+    
+    .t-btn {
+      width: 65px; height: 65px; background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%;
+      color: #fff; font-size: 1.2rem; font-weight: bold;
+      display: flex; justify-content: center; align-items: center;
+      touch-action: none; cursor: pointer; backdrop-filter: blur(4px);
+    }
+    .t-btn:active { background: rgba(56, 189, 248, 0.6); border-color: #38bdf8; transform: scale(0.95); }
+
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85); display: none; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 20;
+    }
+    #overlay h2 { font-size: 2rem; color: #22c55e; margin-bottom: 12px; text-shadow: 0 0 10px rgba(34,197,94,0.5); }
+    #overlay p { font-size: 1rem; color: #eee; margin-bottom: 20px; }
+    #next-btn {
+      background: #0284c7; color: #fff; border: none; padding: 12px 32px;
+      font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="viewport">
+    <div id="ui">
+      <h1>3D迷路脱出ゲーム</h1>
+      <div id="stage-info">STAGE 1 / 10</div>
+    </div>
+
+    <!-- スマホ用ボタン領域 -->
+    <div id="touch-controls">
+      <!-- 左右回転 -->
+      <div class="btn-group">
+        <div class="t-btn" id="btn-left">◀</div>
+        <div class="t-btn" id="btn-right">▶</div>
+      </div>
+      <!-- 前進後退 -->
+      <div class="btn-group">
+        <div class="t-btn" id="btn-back">▼</div>
+        <div class="t-btn" id="btn-fwd">▲</div>
+      </div>
+    </div>
+
+    <div id="overlay">
+      <h2 id="clear-title">STAGE CLEAR!</h2>
+      <p id="clear-desc">次のステージへ進もう！</p>
+      <button id="next-btn" onclick="nextStage()">NEXT STAGE</button>
+    </div>
+  </div>
+
+  <script>
+    let scene, camera, renderer;
+    let moveForward = false, moveBackward = false, turnLeft = false, turnRight = false;
+    let yaw = 0;
+    let currentStage = 0;
+    let isCleared = false;
+    const wallSize = 4;
+    const walls = [];
+    let goalMesh;
+
+    const stages = [
+      [[1,1,1,1,1],[1,2,0,3,1],[1,1,1,1,1]],
+      [[1,1,1,1,1,1],[1,2,0,1,3,1],[1,1,0,1,0,1],[1,1,0,0,0,1],[1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1],[1,2,0,0,1,0,1],[1,1,1,0,1,0,1],[1,3,0,0,0,0,1],[1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1],[1,2,0,1,0,0,3,1],[1,1,0,1,0,1,1,1],[1,0,0,0,0,1,1,1],[1,0,1,1,0,0,0,1],[1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1],[1,2,0,0,0,0,0,0,1],[1,0,1,1,1,1,1,0,1],[1,0,1,3,0,0,1,0,1],[1,0,1,1,1,0,1,0,1],[1,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,0,1],[1,1,1,0,1,0,1,0,1],[1,0,0,0,0,0,1,3,1],[1,0,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1,1],[1,2,0,1,0,0,0,1,0,1],[1,1,0,1,0,1,0,1,0,1],[1,0,0,0,0,1,0,0,0,1],[1,0,1,1,1,1,1,1,0,1],[1,0,0,0,0,0,0,0,3,1],[1,1,1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,1,0,3,1],[1,0,1,0,1,0,1,1,0,1,1],[1,0,1,0,0,0,0,0,0,0,1],[1,1,1,1,1,0,1,1,1,0,1],[1,0,0,0,0,0,1,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,0,1,0,0,0,0,0,1],[1,1,1,1,0,1,0,1,1,1,0,1],[1,0,0,0,0,0,0,1,3,1,0,1],[1,0,1,1,1,1,0,1,0,1,0,1],[1,0,0,0,0,1,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1]],
+      [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,0,0,0,1,0,0,0,1],[1,1,1,0,1,0,1,1,1,0,1,0,1,0,1],[1,0,0,0,0,0,1,0,1,0,0,0,1,0,1],[1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],[1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],[1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],[1,1,1,1,1,0,1,1,1,0,1,1,1,0,1],[1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,1,1,1,1,1,0,1,1,1,0,1,1,1],[1,0,0,0,1,0,0,0,1,0,0,0,0,3,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
+    ];
+
+    function init() {
+      const container = document.getElementById('viewport');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0a12);
+      scene.fog = new THREE.FogExp2(0x0a0a12, 0.05);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      setupControls();
+      setupTouchEvents();
+      loadStage(0);
+
+      window.addEventListener('resize', onWindowResize);
+      animate();
+    }
+
+    function loadStage(index) {
+      while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+      walls.length = 0;
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+      scene.add(ambientLight);
+      const playerLight = new THREE.PointLight(0xffffff, 1.2, 16);
+      camera.add(playerLight);
+      scene.add(camera);
+
+      const map = stages[index];
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+      const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+      const wallGeo = new THREE.BoxGeometry(wallSize, wallSize, wallSize);
+
+      for (let r = 0; r < map.length; r++) {
+        for (let c = 0; c < map[r].length; c++) {
+          const x = c * wallSize;
+          const z = r * wallSize;
+
+          const floor = new THREE.Mesh(new THREE.PlaneGeometry(wallSize, wallSize), floorMat);
+          floor.rotation.x = -Math.PI / 2;
+          floor.position.set(x, 0, z);
+          scene.add(floor);
+
+          const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(wallSize, wallSize), ceilingMat);
+          ceiling.rotation.x = Math.PI / 2;
+          ceiling.position.set(x, wallSize, z);
+          scene.add(ceiling);
+
+          if (map[r][c] === 1) {
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.set(x, wallSize / 2, z);
+            scene.add(wall);
+            walls.push(new THREE.Box3().setFromObject(wall));
+          } else if (map[r][c] === 2) {
+            camera.position.set(x, 1.6, z);
+            yaw = 0;
+            camera.rotation.y = 0;
+          } else if (map[r][c] === 3) {
+            const goalGeo = new THREE.CylinderGeometry(1, 1, 3, 16);
+            const goalMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true });
+            goalMesh = new THREE.Mesh(goalGeo, goalMat);
+            goalMesh.position.set(x, 1.5, z);
+            scene.add(goalMesh);
+
+            const goalLight = new THREE.PointLight(0x22c55e, 2, 10);
+            goalLight.position.set(x, 2, z);
+            scene.add(goalLight);
+          }
+        }
+      }
+
+      document.getElementById('stage-info').innerText = `STAGE ${index + 1} / ${stages.length}`;
+      document.getElementById('overlay').style.display = 'none';
+      isCleared = false;
+    }
+
+    function setupControls() {
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyW' || e.key === 'ArrowUp') moveForward = true;
+        if (e.code === 'KeyS' || e.key === 'ArrowDown') moveBackward = true;
+        if (e.code === 'KeyA' || e.key === 'ArrowLeft') turnLeft = true;
+        if (e.code === 'KeyD' || e.key === 'ArrowRight') turnRight = true;
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyW' || e.key === 'ArrowUp') moveForward = false;
+        if (e.code === 'KeyS' || e.key === 'ArrowDown') moveBackward = false;
+        if (e.code === 'KeyA' || e.key === 'ArrowLeft') turnLeft = false;
+        if (e.code === 'KeyD' || e.key === 'ArrowRight') turnRight = false;
+      });
+    }
+
+    function setupTouchEvents() {
+      const bindBtn = (id, setVar) => {
+        const el = document.getElementById(id);
+        const start = (e) => { e.preventDefault(); setVar(true); };
+        const end = (e) => { e.preventDefault(); setVar(false); };
+        
+        el.addEventListener('touchstart', start);
+        el.addEventListener('touchend', end);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('mouseup', end);
+        el.addEventListener('mouseleave', end);
+      };
+
+      bindBtn('btn-fwd', v => moveForward = v);
+      bindBtn('btn-back', v => moveBackward = v);
+      bindBtn('btn-left', v => turnLeft = v);
+      bindBtn('btn-right', v => turnRight = v);
+    }
+
+    function checkCollision(newPos) {
+      const radius = 0.6;
+      const playerBox = new THREE.Box3(
+        new THREE.Vector3(newPos.x - radius, 0, newPos.z - radius),
+        new THREE.Vector3(newPos.x + radius, 3, newPos.z + radius)
+      );
+
+      for (let wall of walls) {
+        if (playerBox.intersectsBox(wall)) return true;
+      }
+      return false;
+    }
+
+    function nextStage() {
+      if (currentStage < stages.length - 1) {
+        currentStage++;
+        loadStage(currentStage);
+      } else {
+        currentStage = 0;
+        loadStage(0);
+      }
+    }
+
+    let lastTime = performance.now();
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (!isCleared) {
+        const rotSpeed = 2.0 * delta;
+        if (turnLeft) yaw += rotSpeed;
+        if (turnRight) yaw -= rotSpeed;
+        camera.rotation.y = yaw;
+
+        const moveSpeed = 8.0 * delta;
+        let moveDir = 0;
+        if (moveForward) moveDir += 1;
+        if (moveBackward) moveDir -= 1;
+
+        if (moveDir !== 0) {
+          const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+          const nextPos = camera.position.clone().addScaledVector(forward, moveDir * moveSpeed);
+
+          const posX = camera.position.clone();
+          posX.x = nextPos.x;
+          if (!checkCollision(posX)) camera.position.x = nextPos.x;
+
+          const posZ = camera.position.clone();
+          posZ.z = nextPos.z;
+          if (!checkCollision(posZ)) camera.position.z = nextPos.z;
+        }
+
+        if (goalMesh) {
+          goalMesh.rotation.y += 0.02;
+          if (camera.position.distanceTo(goalMesh.position) < 2.0) {
+            isCleared = true;
+            showClearScreen();
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function showClearScreen() {
+      const overlay = document.getElementById('overlay');
+      const title = document.getElementById('clear-title');
+      const desc = document.getElementById('clear-desc');
+      const btn = document.getElementById('next-btn');
+
+      if (currentStage < stages.length - 1) {
+        title.innerText = `STAGE ${currentStage + 1} CLEAR!`;
+        desc.innerText = "次のステージへ進もう！";
+        btn.innerText = "NEXT STAGE";
+      } else {
+        title.innerText = "🎉 ALL STAGES CLEAR! 🎉";
+        desc.innerText = "全10ステージクリア！おめでとう！";
+        btn.innerText = "最初から遊ぶ";
+      }
+
+      overlay.style.display = 'flex';
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
