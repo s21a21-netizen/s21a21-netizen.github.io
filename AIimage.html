@@ -61,7 +61,7 @@
       overflow: hidden;
     }
     .image-box img { max-width: 100%; height: auto; border-radius: 6px; display: none; }
-    #statusMsg { font-size: 0.85rem; margin-top: 10px; height: 1.2em; color: #38bdf8; }
+    #statusMsg { font-size: 0.85rem; margin-top: 10px; min-height: 1.2em; color: #38bdf8; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -84,7 +84,8 @@
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwiPFqxmxgoF3bPhTyBVpN0vDECF6RYD3E0MhPoGlT8ja4HInj8VyFt9n8-RXX7DPzp/exec";
+// 新しいGASのURLを設定済み
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzR7V__iATFNWYuCTVxqUW58ctUi7Vw-RaGOiQCJriiZDfJcGTU2ddhs9Am5ykZc7cF/exec";
 
 async function generateImage() {
   const prompt = document.getElementById('promptInput').value.trim();
@@ -108,13 +109,19 @@ async function generateImage() {
   try {
     const response = await fetch(GAS_URL, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ prompt: prompt })
     });
 
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(data.error.message || data.error);
+      const errorText = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+      throw new Error(errorText);
+    }
+
+    if (!data.generatedImages || !data.generatedImages[0]) {
+      throw new Error("画像データが取得できませんでした。GAS側のAPIキー設定を確認してください。");
     }
 
     const base64Image = data.generatedImages[0].image.imageBytes;
@@ -126,7 +133,7 @@ async function generateImage() {
 
   } catch (error) {
     console.error(error);
-    statusMsg.innerText = "❌ エラーが発生しました";
+    statusMsg.innerText = "❌ エラー: " + error.message;
     statusMsg.style.color = "#f87171";
     placeholder.innerText = "エラーが発生しました";
   } finally {
