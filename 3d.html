@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>F.E - Freedom Everyone 3D Modeler</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111116;
+      color: #eeeeee;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 260px;
+      background: #1a1b23;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-right: 1px solid #2d2f3d;
+      z-index: 10;
+    }
+    h1 {
+      font-size: 1.2rem;
+      color: #60a5fa;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      font-size: 0.7rem;
+      color: #888;
+      margin-top: -12px;
+    }
+    .section-title {
+      font-size: 0.8rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    button {
+      background: #2a2c3a;
+      color: #fff;
+      border: 1px solid #3d4055;
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      flex: 1 1 45%;
+      transition: background 0.2s;
+    }
+    button:hover { background: #3b3e54; }
+    button.active { background: #2563eb; border-color: #3b82f6; }
+    .color-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="color"] {
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+    #viewport { flex: 1; position: relative; }
+    #info-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: #ccc;
+      pointer-events: none;
+    }
+  </style>
+  <!-- Three.js & Controls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div>
+      <h1>F.E</h1>
+      <div class="subtitle">Freedom Everyone 3D Modeler</div>
+    </div>
+
+    <div>
+      <div class="section-title">Shape Add</div>
+      <div class="btn-group">
+        <button onclick="addShape('box')">立方体</button>
+        <button onclick="addShape('sphere')">球体</button>
+        <button onclick="addShape('cylinder')">円柱</button>
+        <button onclick="addShape('plane')">平面</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Transform Mode</div>
+      <div class="btn-group">
+        <button id="btn-translate" class="active" onclick="setMode('translate')">移動 (G)</button>
+        <button id="btn-rotate" onclick="setMode('rotate')">回転 (R)</button>
+        <button id="btn-scale" onclick="setMode('scale')">拡大 (S)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Material</div>
+      <div class="color-picker">
+        <input type="color" id="colorPicker" value="#60a5fa" onchange="updateColor(this.value)">
+        <span style="font-size: 0.8rem; color: #aaa;">オブジェクトの色</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Actions</div>
+      <div class="btn-group">
+        <button onclick="deleteSelected()" style="background: #991b1b; border-color: #dc2626;">削除 (Delete)</button>
+        <button onclick="exportOBJ()" style="background: #059669; border-color: #10b981; flex: 100%;">OBJ書き出し</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewport">
+    <div id="info-overlay">
+      ドラッグ: カメラ移動 / オブジェクトクリック: 選択 / 矢印ドラッグ: 変形
+    </div>
+  </div>
+
+  <script>
+    let scene, camera, renderer, orbit, transform;
+    let selectedObject = null;
+    const objects = [];
+
+    function init() {
+      const container = document.getElementById('viewport');
+
+      // シーン
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111116);
+
+      // カメラ
+      camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(5, 5, 8);
+
+      // レンダラー
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      // グリッドと軸
+      const grid = new THREE.GridHelper(20, 20, 0x444455, 0x222233);
+      scene.add(grid);
+
+      // ライト
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(10, 20, 15);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      // カメラ操作 (OrbitControls)
+      orbit = new THREE.OrbitControls(camera, renderer.domElement);
+      orbit.dampingFactor = 0.05;
+      orbit.enableDamping = true;
+
+      // ギズモ操作 (TransformControls)
+      transform = new THREE.TransformControls(camera, renderer.domElement);
+      transform.addEventListener('change', () => renderer.render(scene, camera));
+      transform.addEventListener('dragging-changed', (event) => {
+        orbit.enabled = !event.value; // 変形中はカメラ回転をオフ
+      });
+      scene.add(transform);
+
+      // レイキャスト（クリック選択用）
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(objects, true);
+
+        if (intersects.length > 0) {
+          const hit = intersects[0].object;
+          selectObject(hit);
+        }
+      });
+
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('keydown', handleShortcuts);
+
+      // 初期形状を1つ追加
+      addShape('box');
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      orbit.update();
+      renderer.render(scene, camera);
+    }
+
+    // 形状の追加
+    function addShape(type) {
+      let geo;
+      if (type === 'box') geo = new THREE.BoxGeometry(1, 1, 1);
+      else if (type === 'sphere') geo = new THREE.SphereGeometry(0.7, 32, 16);
+      else if (type === 'cylinder') geo = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+      else if (type === 'plane') geo = new THREE.PlaneGeometry(2, 2);
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: document.getElementById('colorPicker').value,
+        roughness: 0.4,
+        metalness: 0.1
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, 1, 0);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      scene.add(mesh);
+      objects.push(mesh);
+      selectObject(mesh);
+    }
+
+    // 選択処理
+    function selectObject(obj) {
+      selectedObject = obj;
+      transform.attach(obj);
+      document.getElementById('colorPicker').value = "#" + obj.material.color.getHexString();
+    }
+
+    // モード切替（移動・回転・縮小）
+    function setMode(mode) {
+      transform.setMode(mode);
+      document.querySelectorAll('.btn-group button').forEach(b => {
+        if (b.id.startsWith('btn-')) b.classList.remove('active');
+      });
+      const activeBtn = document.getElementById(`btn-${mode}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // 色変更
+    function updateColor(hex) {
+      if (selectedObject) {
+        selectedObject.material.color.set(hex);
+      }
+    }
+
+    // 削除
+    function deleteSelected() {
+      if (selectedObject) {
+        transform.detach();
+        scene.remove(selectedObject);
+        const idx = objects.indexOf(selectedObject);
+        if (idx > -1) objects.splice(idx, 1);
+        selectedObject = null;
+      }
+    }
+
+    // 3Dモデルのエクスポート (.obj)
+    function exportOBJ() {
+      if (objects.length === 0) return alert('書き出すオブジェクトがありません');
+      const exporter = new THREE.OBJExporter();
+      const result = exporter.parse(scene);
+
+      const blob = new Blob([result], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'FE_Model.obj';
+      link.click();
+    }
+
+    // ショートカットキー
+    function handleShortcuts(e) {
+      if (e.key === 'g' || e.key === 'G') setMode('translate');
+      if (e.key === 'r' || e.key === 'R') setMode('rotate');
+      if (e.key === 's' || e.key === 'S') setMode('scale');
+      if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('viewport');
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
