@@ -1,0 +1,171 @@
+<div style="
+  background: #111;
+  color: #00FF66;
+  font-family: 'Courier New', monospace;
+  border: 4px solid #444;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  box-shadow: inset 0 0 20px #000, 0 10px 25px rgba(0,0,0,0.8);
+  box-sizing: border-box;
+">
+  <!-- パネルヘッダー -->
+  <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+    <h2 style="margin: 0; font-size: 1.6rem; letter-spacing: 3px; color: #FFF; text-shadow: 0 0 8px #00FF66;">
+      🎛️ FULL SIZE SYNTHESIZER SYSTEM
+    </h2>
+    <span style="font-size: 0.8rem; color: #888;">2-OCTAVE EXTENDED CONTROL PANEL</span>
+  </div>
+
+  <!-- パラメータ操作エリア（大きめ配置） -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333;">
+    <!-- 波形選択 -->
+    <div>
+      <label style="font-size: 0.85rem; color: #AAA; display: block; margin-bottom: 6px;">WAVEFORM (波形)</label>
+      <select id="waveSelect" style="width: 100%; background: #000; color: #00FF66; border: 1px solid #00FF66; padding: 8px; font-family: monospace; font-size: 0.9rem; border-radius: 4px;">
+        <option value="sawtooth">SAW (鋸歯状波)</option>
+        <option value="square">SQUARE (矩形波)</option>
+        <option value="sine">SINE (正弦波)</option>
+        <option value="triangle">TRI (三角波)</option>
+      </select>
+    </div>
+
+    <!-- フィルターカットオフ -->
+    <div>
+      <label style="font-size: 0.85rem; color: #AAA; display: block; margin-bottom: 6px;">VCF CUTOFF (フィルター)</label>
+      <input type="range" id="cutoff" min="100" max="8000" value="2500" style="width: 100%; accent-color: #00FF66; height: 25px;">
+    </div>
+
+    <!-- ディレイタイム -->
+    <div>
+      <label style="font-size: 0.85rem; color: #AAA; display: block; margin-bottom: 6px;">DELAY TIME (やまびこ間隔)</label>
+      <input type="range" id="delayTime" min="0" max="0.8" step="0.05" value="0.3" style="width: 100%; accent-color: #00FF66; height: 25px;">
+    </div>
+
+    <!-- ディレイフィードバック -->
+    <div>
+      <label style="font-size: 0.85rem; color: #AAA; display: block; margin-bottom: 6px;">DELAY REPEAT (回数)</label>
+      <input type="range" id="delayFeedback" min="0" max="0.8" step="0.05" value="0.4" style="width: 100%; accent-color: #00FF66; height: 25px;">
+    </div>
+  </div>
+
+  <!-- 2オクターブ鍵盤エリア -->
+  <div style="background: #000; padding: 15px 10px; border-radius: 8px; overflow-x: auto; border: 1px solid #333;">
+    <div id="keyboard" style="display: flex; justify-content: center; position: relative; height: 140px; min-width: 600px; margin: 0 auto;">
+    </div>
+  </div>
+</div>
+
+<script>
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+// 2オクターブ分の音階データ（C3〜C5）
+const notes = [
+  // オクターブ3
+  { note: 'C3', freq: 130.81, type: 'white' },
+  { note: 'C#3', freq: 138.59, type: 'black' },
+  { note: 'D3', freq: 146.83, type: 'white' },
+  { note: 'D#3', freq: 155.56, type: 'black' },
+  { note: 'E3', freq: 164.81, type: 'white' },
+  { note: 'F3', freq: 174.61, type: 'white' },
+  { note: 'F#3', freq: 185.00, type: 'black' },
+  { note: 'G3', freq: 196.00, type: 'white' },
+  { note: 'G#3', freq: 207.65, type: 'black' },
+  { note: 'A3', freq: 220.00, type: 'white' },
+  { note: 'A#3', freq: 233.08, type: 'black' },
+  { note: 'B3', freq: 246.94, type: 'white' },
+  // オクターブ4
+  { note: 'C4', freq: 261.63, type: 'white' },
+  { note: 'C#4', freq: 277.18, type: 'black' },
+  { note: 'D4', freq: 293.66, type: 'white' },
+  { note: 'D#4', freq: 311.13, type: 'black' },
+  { note: 'E4', freq: 329.63, type: 'white' },
+  { note: 'F4', freq: 349.23, type: 'white' },
+  { note: 'F#4', freq: 369.99, type: 'black' },
+  { note: 'G4', freq: 392.00, type: 'white' },
+  { note: 'G#4', freq: 415.30, type: 'black' },
+  { note: 'A4', freq: 440.00, type: 'white' },
+  { note: 'A#4', freq: 466.16, type: 'black' },
+  { note: 'B4', freq: 493.88, type: 'white' },
+  { note: 'C5', freq: 523.25, type: 'white' }
+];
+
+const kbEl = document.getElementById('keyboard');
+
+notes.forEach(n => {
+  const key = document.createElement('div');
+  key.dataset.freq = n.freq;
+  
+  if (n.type === 'white') {
+    key.style.cssText = `
+      width: 32px; height: 130px; background: #EEE; border: 1px solid #111;
+      border-radius: 0 0 5px 5px; margin: 0 1px; cursor: pointer; flex-shrink: 0;
+      box-shadow: inset 0 -6px 0 #CCC; position: relative;
+    `;
+  } else {
+    key.style.cssText = `
+      width: 22px; height: 80px; background: #222; border: 1px solid #000;
+      border-radius: 0 0 3px 3px; margin: 0 -12px; cursor: pointer; z-index: 2; flex-shrink: 0;
+      box-shadow: inset 0 -4px 0 #444; position: relative;
+    `;
+  }
+
+  key.addEventListener('mousedown', () => playSound(n.freq, key, n.type));
+  key.addEventListener('touchstart', (e) => { e.preventDefault(); playSound(n.freq, key, n.type); });
+
+  kbEl.appendChild(key);
+});
+
+function playSound(freq, element, type) {
+  initAudio();
+
+  const wave = document.getElementById('waveSelect').value;
+  const cutoff = parseFloat(document.getElementById('cutoff').value);
+  const dTime = parseFloat(document.getElementById('delayTime').value);
+  const dFb = parseFloat(document.getElementById('delayFeedback').value);
+
+  const osc = audioCtx.createOscillator();
+  osc.type = wave;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(cutoff, audioCtx.currentTime);
+
+  const amp = audioCtx.createGain();
+  amp.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  amp.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+
+  const delay = audioCtx.createDelay();
+  delay.delayTime.value = dTime;
+
+  const feedback = audioCtx.createGain();
+  feedback.gain.value = dFb;
+
+  osc.connect(filter);
+  filter.connect(amp);
+
+  amp.connect(audioCtx.destination);
+  if (dTime > 0) {
+    amp.connect(delay);
+    delay.connect(feedback);
+    feedback.connect(delay);
+    delay.connect(audioCtx.destination);
+  }
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 1.2);
+
+  const origBg = element.style.background;
+  element.style.background = '#00FF66';
+  setTimeout(() => {
+    element.style.background = origBg;
+  }, 200);
+}
+</script>
