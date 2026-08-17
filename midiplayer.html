@@ -2,89 +2,175 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>All-in-One Retro MIDI Player</title>
-  <!-- より安定したCDNリンクに変更 -->
- <script src="https://unpkg.com/@tonejs/midi@2.0.28/build/Midi.js"></script>
+  <title>Audio Equalizer & Exporter</title>
   <style>
     :root {
       --bg-color: #111;
-      --panel-bg: #000;
-      --text-color: #0f0;
-      --border-color: #0f0;
-      --accent-color: #0f0;
+      --panel-bg: #1e1e24;
+      --text-color: #00d0ff;
+      --border-color: #00d0ff;
+      --accent-color: #00d0ff;
     }
 
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: 'Courier New', monospace, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       margin: 0;
-      transition: all 0.3s ease;
     }
-
-    body.theme-8bit { --bg-color: #111; --panel-bg: #000; --text-color: #0f0; --border-color: #0f0; --accent-color: #0f0; }
-    body.theme-ms { --bg-color: #008080; --panel-bg: #c0c0c0; --text-color: #000; --border-color: #808080; --accent-color: navy; }
-    body.theme-xg { --bg-color: #1a1a24; --panel-bg: #0d1117; --text-color: #00d0ff; --border-color: #00d0ff; --accent-color: #00d0ff; }
-    body.theme-sc88 { --bg-color: #222; --panel-bg: #333; --text-color: #00ff66; --border-color: #111; --accent-color: #00ff66; }
 
     .main-container {
       background: var(--panel-bg);
-      border: 4px solid var(--border-color);
-      padding: 20px;
+      border: 2px solid var(--border-color);
+      padding: 24px;
       width: 480px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.8);
-      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0,208,255,0.2);
+      border-radius: 12px;
     }
 
-    .tab-group { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; }
-    .tab-btn { flex: 1; background: rgba(255,255,255,0.1); color: var(--text-color); border: 1px solid var(--border-color); padding: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
-    .tab-btn.active { background: var(--accent-color); color: #000; }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+    }
 
-    .display-panel { background: rgba(0,0,0,0.5); border: 2px inset var(--border-color); padding: 10px; margin-bottom: 15px; }
-    .status-text { font-weight: bold; margin-bottom: 5px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .meters { display: flex; gap: 3px; height: 40px; align-items: flex-end; margin-top: 8px; }
-    .meter-bar { flex: 1; background: rgba(255,255,255,0.05); height: 100%; display: flex; align-items: flex-end; }
-    .meter-fill { width: 100%; background: var(--accent-color); height: 0%; transition: height 0.05s ease; }
-
-    .controls-row { display: flex; gap: 8px; margin: 10px 0; }
-    button.ctrl-btn { background: rgba(255,255,255,0.1); color: var(--text-color); border: 2px solid var(--border-color); padding: 8px; cursor: pointer; font-weight: bold; flex: 1; }
-    button.ctrl-btn:hover:not(:disabled) { background: var(--accent-color); color: #000; }
-    button.ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    .file-input-label { display: block; text-align: center; border: 2px dashed var(--border-color); padding: 8px; cursor: pointer; margin-bottom: 12px; font-size: 12px; }
+    .file-input-label {
+      display: block;
+      text-align: center;
+      border: 2px dashed var(--border-color);
+      padding: 12px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+    }
     input[type="file"] { display: none; }
 
-    .seek-area, .vol-area { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-top: 8px; }
+    .display-panel {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .status-text {
+      font-weight: bold;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* イコライザースライダーのスタイル */
+    .eq-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin: 20px 0;
+      background: rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .eq-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .eq-group label {
+      font-size: 11px;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    .eq-group input[type="range"] {
+      writing-mode: bt-lr; /* Vertical slider */
+      -webkit-appearance: slider-vertical;
+      width: 8px;
+      height: 120px;
+      accent-color: var(--accent-color);
+      cursor: pointer;
+    }
+    .eq-val {
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .controls-row { display: flex; gap: 8px; margin: 15px 0; }
+    button.ctrl-btn {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      flex: 1;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    button.ctrl-btn:hover:not(:disabled) {
+      background: var(--accent-color);
+      color: #000;
+    }
+    button.ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-download {
+      background: #00d0ff !important;
+      color: #000 !important;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .seek-area, .vol-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
     input[type="range"] { flex: 1; accent-color: var(--accent-color); cursor: pointer; }
   </style>
 </head>
-<body class="theme-8bit">
+<body>
 
 <div class="main-container">
-  <div class="tab-group">
-    <button class="tab-btn active" onclick="switchTheme('8bit')">8-BIT</button>
-    <button class="tab-btn" onclick="switchTheme('ms')">MS GS</button>
-    <button class="tab-btn" onclick="switchTheme('xg')">YAMAHA XG</button>
-    <button class="tab-btn" onclick="switchTheme('sc88')">ROLAND SC-88</button>
-  </div>
+  <h2>AUDIO EQUALIZER & EXPORTER</h2>
 
   <label class="file-input-label">
-    [ SELECT MIDI FILE ]
-    <input type="file" id="fileInput" accept=".mid,.midi">
+    [ 音楽ファイルを選択 (MP3 / M4A / WAV) ]
+    <input type="file" id="fileInput" accept="audio/*">
   </label>
 
   <div class="display-panel">
-    <div class="status-text" id="statusText">SYSTEM READY</div>
-    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
+    <div class="status-text" id="statusText">ファイルを選択してください</div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px;">
       <span>TIME:</span>
       <span id="timeDisplay">00:00 / 00:00</span>
     </div>
-    <div class="meters" id="meterContainer"></div>
+  </div>
+
+  <!-- 3バンド イコライザー -->
+  <div class="eq-container">
+    <div class="eq-group">
+      <label>LOW (低音)</label>
+      <input type="range" id="eqLow" min="-12" max="12" value="0" step="1">
+      <span class="eq-val" id="valLow">0 dB</span>
+    </div>
+    <div class="eq-group">
+      <label>MID (中音)</label>
+      <input type="range" id="eqMid" min="-12" max="12" value="0" step="1">
+      <span class="eq-val" id="valMid">0 dB</span>
+    </div>
+    <div class="eq-group">
+      <label>HIGH (高音)</label>
+      <input type="range" id="eqHigh" min="-12" max="12" value="0" step="1">
+      <span class="eq-val" id="valHigh">0 dB</span>
+    </div>
   </div>
 
   <div class="seek-area">
@@ -101,241 +187,286 @@
     <label>VOLUME:</label>
     <input type="range" id="volBar" min="0" max="1" step="0.01" value="0.8">
   </div>
+
+  <button class="ctrl-btn btn-download" id="btnDownload" disabled>音声を書き出してダウンロード (.wav)</button>
 </div>
 
 <script>
-let currentMode = '8bit';
-let audioCtx, masterGain, parsedMidi = null;
+let audioCtx, sourceNode;
+let lowFilter, midFilter, highFilter, masterGain;
+let audioBuffer = null;
 let isPlaying = false, isPaused = false, pauseOffset = 0, startTime = 0;
-let activeNodes = [], animFrameId = null;
-const chFills = [];
-
-const meterContainer = document.getElementById('meterContainer');
-for(let i = 0; i < 16; i++) {
-  const bar = document.createElement('div'); bar.className = 'meter-bar';
-  const fill = document.createElement('div'); fill.className = 'meter-fill';
-  bar.appendChild(fill); meterContainer.appendChild(bar);
-  chFills.push(fill);
-}
+let animFrameId = null;
 
 const fileInput = document.getElementById('fileInput');
 const btnPlay = document.getElementById('btnPlay');
 const btnPause = document.getElementById('btnPause');
 const btnStop = document.getElementById('btnStop');
+const btnDownload = document.getElementById('btnDownload');
 const seekBar = document.getElementById('seekBar');
 const volBar = document.getElementById('volBar');
 const timeDisplay = document.getElementById('timeDisplay');
 const statusText = document.getElementById('statusText');
 
-function switchTheme(mode) {
-  currentMode = mode;
-  document.body.className = `theme-${mode}`;
-  document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
-    btn.classList.toggle('active', ['8bit', 'ms', 'xg', 'sc88'][idx] === mode);
-  });
-  if (isPlaying) play(audioCtx.currentTime - startTime);
-}
+const eqLow = document.getElementById('eqLow');
+const eqMid = document.getElementById('eqMid');
+const eqHigh = document.getElementById('eqHigh');
 
-async function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = volBar.value;
-    masterGain.connect(audioCtx.destination);
-  }
-  if (audioCtx.state === 'suspended') {
-    await audioCtx.resume();
-  }
-}
-
-fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+// EQ ノードの初期化
+function initAudioEngine() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    // ライブラリの参照チェック
-    const MidiParser = window.Midi || (window.Tone && window.Tone.Midi);
-    if (!MidiParser) {
-      alert("MIDI解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。");
-      return;
-    }
-    parsedMidi = new MidiParser(arrayBuffer);
-    btnPlay.disabled = false;
-    seekBar.disabled = false;
-    statusText.textContent = `LOADED: ${file.name}`;
-    stop();
-    updateTimeDisplay(0, parsedMidi.duration);
-  } catch (err) {
-    console.error(err);
-    alert("MIDIファイルの読み込みに失敗しました。");
-  }
+  lowFilter = audioCtx.createBiquadFilter();
+  lowFilter.type = 'lowshelf';
+  lowFilter.frequency.value = 320;
+
+  midFilter = audioCtx.createBiquadFilter();
+  midFilter.type = 'peaking';
+  midFilter.frequency.value = 1000;
+  midFilter.Q.value = 0.5;
+
+  highFilter = audioCtx.createBiquadFilter();
+  highFilter.type = 'highshelf';
+  highFilter.frequency.value = 3200;
+
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = volBar.value;
+
+  // ノードの接続: Low -> Mid -> High -> Gain -> Destination
+  lowFilter.connect(midFilter);
+  midFilter.connect(highFilter);
+  highFilter.connect(masterGain);
+  masterGain.connect(audioCtx.destination);
+}
+
+// EQスライダーの連動
+eqLow.addEventListener('input', () => {
+  document.getElementById('valLow').textContent = `${eqLow.value} dB`;
+  if (lowFilter) lowFilter.gain.value = parseFloat(eqLow.value);
+});
+eqMid.addEventListener('input', () => {
+  document.getElementById('valMid').textContent = `${eqMid.value} dB`;
+  if (midFilter) midFilter.gain.value = parseFloat(eqMid.value);
+});
+eqHigh.addEventListener('input', () => {
+  document.getElementById('valHigh').textContent = `${eqHigh.value} dB`;
+  if (highFilter) highFilter.gain.value = parseFloat(eqHigh.value);
 });
 
 volBar.addEventListener('input', () => { if (masterGain) masterGain.gain.value = volBar.value; });
 
-btnPlay.addEventListener('click', async () => { 
-  await initAudio(); 
-  isPaused ? resume() : play(pauseOffset); 
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  initAudioEngine();
+  statusText.textContent = "ファイルを読み込み中...";
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    
+    btnPlay.disabled = false;
+    btnDownload.disabled = false;
+    seekBar.disabled = false;
+    statusText.textContent = `LOADED: ${file.name}`;
+    stop();
+    updateTimeDisplay(0, audioBuffer.duration);
+  } catch (err) {
+    console.error(err);
+    statusText.textContent = "ファイルの読み込みに失敗しました";
+  }
 });
 
+btnPlay.addEventListener('click', () => {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  isPaused ? resume() : play(pauseOffset);
+});
 btnPause.addEventListener('click', pause);
 btnStop.addEventListener('click', stop);
 
-seekBar.addEventListener('input', () => {
-  if (!parsedMidi) return;
-  const targetTime = (seekBar.value / 100) * parsedMidi.duration;
-  pauseOffset = targetTime;
-  if (isPlaying) { stopNodes(); play(targetTime); }
-  else { updateTimeDisplay(targetTime, parsedMidi.duration); }
-});
-
-function createNoteNode(note, now, noteStart, noteDuration) {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  const freq = 440 * Math.pow(2, (note.midi - 69) / 12);
-
-  if (currentMode === '8bit') {
-    osc.type = 'square';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.12, now + noteStart);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + noteStart + noteDuration);
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start(now + noteStart);
-    osc.stop(now + noteStart + noteDuration);
-    return [osc];
-  } 
-  else if (currentMode === 'ms') {
-    const filter = audioCtx.createBiquadFilter();
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq;
-    filter.type = 'lowpass';
-    filter.frequency.value = 1200;
-    gain.gain.setValueAtTime(0.1, now + noteStart);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + noteStart + noteDuration);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-    osc.start(now + noteStart);
-    osc.stop(now + noteStart + noteDuration);
-    return [osc];
-  }
-  else if (currentMode === 'xg') {
-    const osc2 = audioCtx.createOscillator();
-    const filter = audioCtx.createBiquadFilter();
-    osc.type = 'sawtooth';
-    osc2.type = 'square';
-    osc.frequency.value = freq;
-    osc2.frequency.value = freq * 1.001;
-    filter.type = 'lowpass';
-    filter.frequency.value = 2500;
-    gain.gain.setValueAtTime(0.08, now + noteStart);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + noteStart + noteDuration);
-    osc.connect(filter); osc2.connect(filter);
-    filter.connect(gain); gain.connect(masterGain);
-    osc.start(now + noteStart); osc.stop(now + noteStart + noteDuration);
-    osc2.start(now + noteStart); osc2.stop(now + noteStart + noteDuration);
-    return [osc, osc2];
-  }
-  else {
-    const filter = audioCtx.createBiquadFilter();
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq;
-    filter.type = 'lowpass';
-    filter.frequency.value = 1800;
-    gain.gain.setValueAtTime(0.12, now + noteStart);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + noteStart + noteDuration);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-    osc.start(now + noteStart);
-    osc.stop(now + noteStart + noteDuration);
-    return [osc];
-  }
-}
-
 function play(startFrom = 0) {
-  if (!parsedMidi) return;
-  stopNodes();
-  isPlaying = true; isPaused = false;
+  if (!audioBuffer) return;
+  stopSource();
+
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  
+  // ソースをEQの最初のフィルターへ接続
+  sourceNode.connect(lowFilter);
+  
+  // EQパラメーターを適用
+  lowFilter.gain.value = parseFloat(eqLow.value);
+  midFilter.gain.value = parseFloat(eqMid.value);
+  highFilter.gain.value = parseFloat(eqHigh.value);
+
+  sourceNode.start(0, startFrom);
   startTime = audioCtx.currentTime - startFrom;
-  btnPlay.disabled = true; btnPause.disabled = false; btnStop.disabled = false;
-  statusText.textContent = `PLAYING [${currentMode.toUpperCase()}]`;
+  isPlaying = true;
+  isPaused = false;
 
-  const now = audioCtx.currentTime;
-  parsedMidi.tracks.forEach((track, trkIdx) => {
-    const ch = trkIdx % 16;
-    track.notes.forEach(note => {
-      if (note.time + note.duration < startFrom) return;
-      const noteStart = Math.max(0, note.time - startFrom);
-      const noteDuration = note.time < startFrom ? (note.time + note.duration - startFrom) : note.duration;
+  btnPlay.disabled = true;
+  btnPause.disabled = false;
+  btnStop.disabled = false;
+  statusText.textContent = "PLAYING";
 
-      const nodes = createNoteNode(note, now, noteStart, noteDuration);
-      nodes.forEach(osc => {
-        activeNodes.push({ osc, ch, time: note.time, duration: note.duration });
-      });
-    });
-  });
   updateLoop();
 }
 
 function pause() {
   if (!isPlaying) return;
   pauseOffset = audioCtx.currentTime - startTime;
-  stopNodes(); isPlaying = false; isPaused = true;
-  btnPlay.disabled = false; btnPause.disabled = true;
+  stopSource();
+  isPlaying = false;
+  isPaused = true;
+  btnPlay.disabled = false;
+  btnPause.disabled = true;
   statusText.textContent = "PAUSED";
-  resetMeters();
   cancelAnimationFrame(animFrameId);
 }
 
 function resume() { play(pauseOffset); }
 
 function stop() {
-  stopNodes(); isPlaying = false; isPaused = false; pauseOffset = 0;
-  btnPlay.disabled = !parsedMidi; btnPause.disabled = true; btnStop.disabled = true;
-  seekBar.value = 0; statusText.textContent = parsedMidi ? "STOPPED" : "SYSTEM READY";
-  resetMeters();
+  stopSource();
+  isPlaying = false;
+  isPaused = false;
+  pauseOffset = 0;
+  btnPlay.disabled = !audioBuffer;
+  btnPause.disabled = true;
+  btnStop.disabled = true;
+  seekBar.value = 0;
+  statusText.textContent = audioBuffer ? "STOPPED" : "ファイルを選択してください";
   cancelAnimationFrame(animFrameId);
-  if (parsedMidi) updateTimeDisplay(0, parsedMidi.duration);
+  if (audioBuffer) updateTimeDisplay(0, audioBuffer.duration);
 }
 
-function stopNodes() {
-  activeNodes.forEach(n => { try { n.osc.stop(); } catch(e){} });
-  activeNodes = [];
+function stopSource() {
+  if (sourceNode) {
+    try { sourceNode.stop(); } catch(e){}
+    sourceNode.disconnect();
+    sourceNode = null;
+  }
 }
 
-function resetMeters() {
-  chFills.forEach(f => f.style.height = '0%');
-}
+seekBar.addEventListener('input', () => {
+  if (!audioBuffer) return;
+  const targetTime = (seekBar.value / 100) * audioBuffer.duration;
+  pauseOffset = targetTime;
+  if (isPlaying) { play(targetTime); }
+  else { updateTimeDisplay(targetTime, audioBuffer.duration); }
+});
 
 function updateLoop() {
-  if (!isPlaying || !parsedMidi) return;
+  if (!isPlaying || !audioBuffer) return;
   const current = audioCtx.currentTime - startTime;
-  const duration = parsedMidi.duration;
+  const duration = audioBuffer.duration;
 
   if (current >= duration) { stop(); return; }
 
   seekBar.value = (current / duration) * 100;
   updateTimeDisplay(current, duration);
-
-  const activeChs = new Array(16).fill(0);
-  activeNodes.forEach(n => {
-    if (current >= n.time && current <= n.time + n.duration) {
-      activeChs[n.ch] = Math.min(100, activeChs[n.ch] + 35);
-    }
-  });
-  chFills.forEach((fill, i) => {
-    fill.style.height = `${activeChs[i]}%`;
-  });
-
   animFrameId = requestAnimationFrame(updateLoop);
 }
 
 function updateTimeDisplay(current, duration) {
   const fmt = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
   timeDisplay.textContent = `${fmt(current)} / ${fmt(duration)}`;
+}
+
+// --- イコライザー適用後の書き出し（オフラインレンダリング & WAVダウンロード）---
+btnDownload.addEventListener('click', async () => {
+  if (!audioBuffer) return;
+
+  statusText.textContent = "書き出し中...";
+  btnDownload.disabled = true;
+
+  const offlineCtx = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+
+  const offSource = offlineCtx.createBufferSource();
+  offSource.buffer = audioBuffer;
+
+  const offLow = offlineCtx.createBiquadFilter();
+  offLow.type = 'lowshelf';
+  offLow.frequency.value = 320;
+  offLow.gain.value = parseFloat(eqLow.value);
+
+  const offMid = offlineCtx.createBiquadFilter();
+  offMid.type = 'peaking';
+  offMid.frequency.value = 1000;
+  offMid.Q.value = 0.5;
+  offMid.gain.value = parseFloat(eqMid.value);
+
+  const offHigh = offlineCtx.createBiquadFilter();
+  offHigh.type = 'highshelf';
+  offHigh.frequency.value = 3200;
+  offHigh.gain.value = parseFloat(eqHigh.value);
+
+  offSource.connect(offLow);
+  offLow.connect(offMid);
+  offMid.connect(offHigh);
+  offHigh.connect(offlineCtx.destination);
+
+  offSource.start(0);
+
+  const renderedBuffer = await offlineCtx.startRendering();
+  const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+
+  const url = URL.createObjectURL(wavBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'eq_processed_audio.wav';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  statusText.textContent = "書き出し完了！";
+  btnDownload.disabled = false;
+});
+
+// AudioBuffer を WAV フォーマット（Blob）に変換する関数
+function bufferToWave(abuffer, len) {
+  let numOfChan = abuffer.numberOfChannels,
+      length = len * numOfChan * 2 + 44,
+      out = new DataView(new ArrayBuffer(length)),
+      channels = [], i, sample,
+      offset = 0,
+      pos = 0;
+
+  function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
+  function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+
+  setUint32(0x46464952);                         // "RIFF"
+  setUint32(length - 8);                         // file length - 8
+  setUint32(0x45564157);                         // "WAVE"
+  setUint32(0x20746d66);                         // "fmt " chunk
+  setUint32(16);                                 // length = 16
+  setUint16(1);                                  // PCM (uncompressed)
+  setUint16(numOfChan);
+  setUint32(abuffer.sampleRate);
+  setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+  setUint16(numOfChan * 2);                      // block-align
+  setUint16(16);                                 // 16-bit
+  setUint32(0x61746164);                         // "data" chunk
+  setUint32(length - pos - 4);                   // chunk length
+
+  for(i = 0; i < abuffer.numberOfChannels; i++)
+    channels.push(abuffer.getChannelData(i));
+
+  while(pos < length) {
+    for(i = 0; i < numOfChan; i++) {
+      sample = Math.max(-1, Math.min(1, channels[i][offset]));
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+      out.setInt16(pos, sample, true);
+      pos += 2;
+    }
+    offset++;
+  }
+  return new Blob([out], {type: "audio/wav"});
 }
 </script>
 </body>
