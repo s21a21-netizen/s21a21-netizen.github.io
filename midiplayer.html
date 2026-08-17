@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>All-in-One Retro MIDI Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi"></script>
+  <!-- より安定したCDNリンクに変更 -->
+  <script src="https://unpkg.com/@tonejs/midi"></script>
   <style>
     :root {
       --bg-color: #111;
@@ -25,23 +26,10 @@
       transition: all 0.3s ease;
     }
 
-    /* テーマ定義 */
-    body.theme-8bit {
-      --bg-color: #111; --panel-bg: #000; --text-color: #0f0; --border-color: #0f0; --accent-color: #0f0;
-      font-family: 'Courier New', monospace;
-    }
-    body.theme-ms {
-      --bg-color: #008080; --panel-bg: #c0c0c0; --text-color: #000; --border-color: #808080; --accent-color: navy;
-      font-family: 'Tahoma', sans-serif;
-    }
-    body.theme-xg {
-      --bg-color: #1a1a24; --panel-bg: #0d1117; --text-color: #00d0ff; --border-color: #00d0ff; --accent-color: #00d0ff;
-      font-family: 'Arial', sans-serif;
-    }
-    body.theme-sc88 {
-      --bg-color: #222; --panel-bg: #333; --text-color: #00ff66; --border-color: #111; --accent-color: #00ff66;
-      font-family: 'Segoe UI', sans-serif;
-    }
+    body.theme-8bit { --bg-color: #111; --panel-bg: #000; --text-color: #0f0; --border-color: #0f0; --accent-color: #0f0; }
+    body.theme-ms { --bg-color: #008080; --panel-bg: #c0c0c0; --text-color: #000; --border-color: #808080; --accent-color: navy; }
+    body.theme-xg { --bg-color: #1a1a24; --panel-bg: #0d1117; --text-color: #00d0ff; --border-color: #00d0ff; --accent-color: #00d0ff; }
+    body.theme-sc88 { --bg-color: #222; --panel-bg: #333; --text-color: #00ff66; --border-color: #111; --accent-color: #00ff66; }
 
     .main-container {
       background: var(--panel-bg);
@@ -52,79 +40,23 @@
       border-radius: 8px;
     }
 
-    /* タブ切り替え */
-    .tab-group {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 15px;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 8px;
-    }
-    .tab-btn {
-      flex: 1;
-      background: rgba(255,255,255,0.1);
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-      padding: 6px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .tab-btn.active {
-      background: var(--accent-color);
-      color: #000;
-    }
+    .tab-group { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; }
+    .tab-btn { flex: 1; background: rgba(255,255,255,0.1); color: var(--text-color); border: 1px solid var(--border-color); padding: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .tab-btn.active { background: var(--accent-color); color: #000; }
 
-    /* 共通表示領域 */
-    .display-panel {
-      background: rgba(0,0,0,0.5);
-      border: 2px inset var(--border-color);
-      padding: 10px;
-      margin-bottom: 15px;
-    }
-    .status-text {
-      font-weight: bold;
-      margin-bottom: 5px;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .display-panel { background: rgba(0,0,0,0.5); border: 2px inset var(--border-color); padding: 10px; margin-bottom: 15px; }
+    .status-text { font-weight: bold; margin-bottom: 5px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* SC-88用16chメーター */
-    .meters {
-      display: flex;
-      gap: 3px;
-      height: 40px;
-      align-items: flex-end;
-      margin-top: 8px;
-    }
+    .meters { display: flex; gap: 3px; height: 40px; align-items: flex-end; margin-top: 8px; }
     .meter-bar { flex: 1; background: rgba(255,255,255,0.05); height: 100%; display: flex; align-items: flex-end; }
     .meter-fill { width: 100%; background: var(--accent-color); height: 0%; transition: height 0.05s ease; }
 
-    /* コントロール群 */
     .controls-row { display: flex; gap: 8px; margin: 10px 0; }
-    button.ctrl-btn {
-      background: rgba(255,255,255,0.1);
-      color: var(--text-color);
-      border: 2px solid var(--border-color);
-      padding: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      flex: 1;
-    }
+    button.ctrl-btn { background: rgba(255,255,255,0.1); color: var(--text-color); border: 2px solid var(--border-color); padding: 8px; cursor: pointer; font-weight: bold; flex: 1; }
     button.ctrl-btn:hover:not(:disabled) { background: var(--accent-color); color: #000; }
     button.ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    .file-input-label {
-      display: block;
-      text-align: center;
-      border: 2px dashed var(--border-color);
-      padding: 8px;
-      cursor: pointer;
-      margin-bottom: 12px;
-      font-size: 12px;
-    }
+    .file-input-label { display: block; text-align: center; border: 2px dashed var(--border-color); padding: 8px; cursor: pointer; margin-bottom: 12px; font-size: 12px; }
     input[type="file"] { display: none; }
 
     .seek-area, .vol-area { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-top: 8px; }
@@ -134,7 +66,6 @@
 <body class="theme-8bit">
 
 <div class="main-container">
-  <!-- モード選択タブ -->
   <div class="tab-group">
     <button class="tab-btn active" onclick="switchTheme('8bit')">8-BIT</button>
     <button class="tab-btn" onclick="switchTheme('ms')">MS GS</button>
@@ -147,30 +78,25 @@
     <input type="file" id="fileInput" accept=".mid,.midi">
   </label>
 
-  <!-- 共通ディスプレイ -->
   <div class="display-panel">
     <div class="status-text" id="statusText">SYSTEM READY</div>
     <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
       <span>TIME:</span>
       <span id="timeDisplay">00:00 / 00:00</span>
     </div>
-    <!-- SC-88用メーター (全モード共通表示) -->
     <div class="meters" id="meterContainer"></div>
   </div>
 
-  <!-- シークバー -->
   <div class="seek-area">
     <input type="range" id="seekBar" min="0" max="100" value="0" disabled>
   </div>
 
-  <!-- 操作ボタン -->
   <div class="controls-row">
     <button class="ctrl-btn" id="btnPlay" disabled>PLAY</button>
     <button class="ctrl-btn" id="btnPause" disabled>PAUSE</button>
     <button class="ctrl-btn" id="btnStop" disabled>STOP</button>
   </div>
 
-  <!-- 音量調整 -->
   <div class="vol-area">
     <label>VOLUME:</label>
     <input type="range" id="volBar" min="0" max="1" step="0.01" value="0.8">
@@ -184,7 +110,6 @@ let isPlaying = false, isPaused = false, pauseOffset = 0, startTime = 0;
 let activeNodes = [], animFrameId = null;
 const chFills = [];
 
-// メーター初期化 (16ch)
 const meterContainer = document.getElementById('meterContainer');
 for(let i = 0; i < 16; i++) {
   const bar = document.createElement('div'); bar.className = 'meter-bar';
@@ -202,43 +127,58 @@ const volBar = document.getElementById('volBar');
 const timeDisplay = document.getElementById('timeDisplay');
 const statusText = document.getElementById('statusText');
 
-// テーマ切り替え
 function switchTheme(mode) {
   currentMode = mode;
   document.body.className = `theme-${mode}`;
   document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
     btn.classList.toggle('active', ['8bit', 'ms', 'xg', 'sc88'][idx] === mode);
   });
-  
-  // モード変更時に再生中の音色を即座に切り替えるため再スタート
-  if (isPlaying) {
-    play(audioCtx.currentTime - startTime);
-  }
+  if (isPlaying) play(audioCtx.currentTime - startTime);
 }
 
-function initAudio() {
+async function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
     masterGain.gain.value = volBar.value;
     masterGain.connect(audioCtx.destination);
   }
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
 }
 
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const arrayBuffer = await file.arrayBuffer();
-  parsedMidi = new Midi(arrayBuffer);
-  btnPlay.disabled = false;
-  seekBar.disabled = false;
-  statusText.textContent = `LOADED: ${file.name}`;
-  stop();
-  updateTimeDisplay(0, parsedMidi.duration);
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    // ライブラリの参照チェック
+    const MidiParser = window.Midi || (window.Tone && window.Tone.Midi);
+    if (!MidiParser) {
+      alert("MIDI解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。");
+      return;
+    }
+    parsedMidi = new MidiParser(arrayBuffer);
+    btnPlay.disabled = false;
+    seekBar.disabled = false;
+    statusText.textContent = `LOADED: ${file.name}`;
+    stop();
+    updateTimeDisplay(0, parsedMidi.duration);
+  } catch (err) {
+    console.error(err);
+    alert("MIDIファイルの読み込みに失敗しました。");
+  }
 });
 
 volBar.addEventListener('input', () => { if (masterGain) masterGain.gain.value = volBar.value; });
-btnPlay.addEventListener('click', () => { initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume(); isPaused ? resume() : play(pauseOffset); });
+
+btnPlay.addEventListener('click', async () => { 
+  await initAudio(); 
+  isPaused ? resume() : play(pauseOffset); 
+});
+
 btnPause.addEventListener('click', pause);
 btnStop.addEventListener('click', stop);
 
@@ -250,7 +190,6 @@ seekBar.addEventListener('input', () => {
   else { updateTimeDisplay(targetTime, parsedMidi.duration); }
 });
 
-// 音源モード別のノード生成ロジック
 function createNoteNode(note, now, noteStart, noteDuration) {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -288,7 +227,7 @@ function createNoteNode(note, now, noteStart, noteDuration) {
     osc.type = 'sawtooth';
     osc2.type = 'square';
     osc.frequency.value = freq;
-    osc2.frequency.value = freq * 1.001; // デチューン
+    osc2.frequency.value = freq * 1.001;
     filter.type = 'lowpass';
     filter.frequency.value = 2500;
     gain.gain.setValueAtTime(0.08, now + noteStart);
@@ -299,7 +238,7 @@ function createNoteNode(note, now, noteStart, noteDuration) {
     osc2.start(now + noteStart); osc2.stop(now + noteStart + noteDuration);
     return [osc, osc2];
   }
-  else { // SC-88
+  else {
     const filter = audioCtx.createBiquadFilter();
     osc.type = 'sawtooth';
     osc.frequency.value = freq;
@@ -381,7 +320,6 @@ function updateLoop() {
   seekBar.value = (current / duration) * 100;
   updateTimeDisplay(current, duration);
 
-  // Meter Animation
   const activeChs = new Array(16).fill(0);
   activeNodes.forEach(n => {
     if (current >= n.time && current <= n.time + n.duration) {
