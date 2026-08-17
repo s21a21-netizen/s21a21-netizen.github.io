@@ -1,0 +1,149 @@
+<div style="
+  background: #18181b;
+  color: #f4f4f5;
+  font-family: sans-serif;
+  border: 4px solid #3f3f46;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  align-items: flex-start;
+">
+  <!-- 左側：ドット絵キャンバスエリア -->
+  <div style="flex: 1; min-width: 280px; text-align: center;">
+    <h2 style="margin: 0 0 10px 0; font-size: 1.4rem; color: #a855f7;">🎨 ドット絵キャンバス</h2>
+    <p style="font-size: 0.8rem; color: #a1a1aa; margin-bottom: 15px;">色を選んでマス目をクリック！完成したら送信ボタンを押してね。</p>
+
+    <!-- パレット＆操作ボタン -->
+    <div style="margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <label style="font-size: 0.85rem;">ペン色: <input type="color" id="colorPicker" value="#000000" style="cursor: pointer; vertical-align: middle;"></label>
+      <button type="button" onclick="clearCanvas()" style="background: #3f3f46; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">全消し</button>
+    </div>
+
+    <!-- キャンバス描画領域 (16x16) -->
+    <div style="overflow-x: auto; padding: 5px 0;">
+      <canvas id="pixelCanvas" width="256" height="256" style="background: #ffffff; border: 2px solid #52525b; cursor: crosshair; image-rendering: pixelated; touch-action: none;"></canvas>
+    </div>
+
+    <!-- GAS送信用隠しフォーム -->
+    <form id="uploadForm" action="https://script.google.com/macros/s/AKfycbyGlUgYuX2qJOEK2egVYgmgTwWC-nPCUicv-IR4mZjkmVcua0SOjwyvRjpFVy5r4oZS/exec" method="POST" target="hidden_iframe" style="margin-top: 15px;">
+      <input type="hidden" name="imageData" id="imageData">
+      <button type="submit" onclick="prepareSubmit()" style="background: #a855f7; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem;">サーバーに投稿 🚀</button>
+    </form>
+
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="onSubmitted()"></iframe>
+    <div id="statusMsg" style="font-size: 0.85rem; margin-top: 10px; height: 1.2em; color: #38bdf8;"></div>
+  </div>
+
+  <!-- 右側：お知らせエリア -->
+  <div style="flex: 1; min-width: 260px; background: #27272a; padding: 20px; border-radius: 8px; border: 1px solid #3f3f46; text-align: left;">
+    <h3 style="margin: 0 0 12px 0; font-size: 1.2rem; color: #f4f4f5; border-bottom: 2px solid #a855f7; padding-bottom: 6px;">お知らせ</h3>
+    <p style="font-size: 0.9rem; line-height: 1.6; color: #d4d4d8; margin: 0 0 15px 0;">
+      ドット絵を描きたい人用。書いたデータを保存したい方は「サーバーに投稿」を押してから、こちらにDMを送ってくれればデータを渡します！
+    </p>
+    <div style="font-size: 0.8rem; color: #a1a1aa; line-height: 1.5; background: #18181b; padding: 10px; border-radius: 6px;">
+      池崎亮介 (@ikezakiryo_suke)<br>
+      ドット絵を描きたい人用。書いたデータを保存したい方はサーバーに投稿するを押してからこちらにdmを送ってくれればデータを渡します
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('pixelCanvas');
+const ctx = canvas.getContext('2d');
+const gridSize = 16;
+const pixelSize = canvas.width / gridSize;
+let isDrawing = false;
+let isSubmitting = false;
+
+let pixels = Array(gridSize).fill(null).map(() => Array(gridSize).fill('#ffffff'));
+
+function render() {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      ctx.fillStyle = pixels[r][c];
+      ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+    }
+  }
+  drawGrid();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = "#e4e4e7";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= gridSize; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * pixelSize, 0);
+    ctx.lineTo(i * pixelSize, canvas.height);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(0, i * pixelSize);
+    ctx.lineTo(canvas.width, i * pixelSize);
+    ctx.stroke();
+  }
+}
+
+function fillPixel(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+  const x = Math.floor((clientX - rect.left) / (rect.width / gridSize));
+  const y = Math.floor((clientY - rect.top) / (rect.height / gridSize));
+  
+  if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+    const color = document.getElementById('colorPicker').value;
+    pixels[y][x] = color;
+    render();
+  }
+}
+
+canvas.addEventListener('mousedown', (e) => { isDrawing = true; fillPixel(e); });
+canvas.addEventListener('mousemove', (e) => { if (isDrawing) fillPixel(e); });
+document.addEventListener('mouseup', () => isDrawing = false);
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; fillPixel(e); }, { passive: false });
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (isDrawing) fillPixel(e); }, { passive: false });
+canvas.addEventListener('touchend', () => isDrawing = false);
+
+function clearCanvas() {
+  if (confirm("キャンバスをクリアする？")) {
+    pixels = Array(gridSize).fill(null).map(() => Array(gridSize).fill('#ffffff'));
+    render();
+  }
+}
+
+function prepareSubmit() {
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tempCtx = tempCanvas.getContext('2d');
+
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      tempCtx.fillStyle = pixels[r][c];
+      tempCtx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
+    }
+  }
+
+  document.getElementById('imageData').value = tempCanvas.toDataURL('image/png');
+  document.getElementById('statusMsg').innerText = "送信中...";
+  document.getElementById('statusMsg').style.color = "#38bdf8";
+  isSubmitting = true;
+}
+
+function onSubmitted() {
+  if (isSubmitting) {
+    document.getElementById('statusMsg').innerText = "🎉 サーバーに送信完了！";
+    document.getElementById('statusMsg').style.color = "#4ade80";
+    isSubmitting = false;
+  }
+}
+
+render();
+</script>
