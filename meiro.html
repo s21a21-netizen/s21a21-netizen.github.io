@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>3D迷路脱出ゲーム - スマホ対応版</title>
+  <title>3D迷路脱出ゲーム - 全50ステージ版</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body { font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; overflow: hidden; touch-action: manipulation; }
@@ -17,6 +17,14 @@
     h1 { font-size: 1rem; color: #f59e0b; margin-bottom: 2px; }
     #stage-info { font-size: 0.9rem; color: #38bdf8; font-weight: bold; }
     
+    /* ミニマップ */
+    #minimap-container {
+      position: absolute; top: 12px; right: 12px; z-index: 10;
+      background: rgba(18, 19, 28, 0.85); border: 1px solid #2d2f45;
+      border-radius: 8px; padding: 6px; display: flex; flex-direction: column; align-items: center;
+    }
+    #minimap { background: #0f172a; border-radius: 4px; display: block; }
+
     /* スマホ用コントロールボタン */
     #touch-controls {
       position: absolute; bottom: 20px; left: 0; width: 100%;
@@ -53,17 +61,20 @@
   <div id="viewport">
     <div id="ui">
       <h1>3D迷路脱出ゲーム</h1>
-      <div id="stage-info">STAGE 1 / 10</div>
+      <div id="stage-info">STAGE 1 / 50</div>
     </div>
 
-    <!-- スマホ用ボタン領域 -->
+    <!-- ミニマップ -->
+    <div id="minimap-container">
+      <canvas id="minimap" width="100" height="100"></canvas>
+    </div>
+
+    <!-- スマホ用ボタン -->
     <div id="touch-controls">
-      <!-- 左右回転 -->
       <div class="btn-group">
         <div class="t-btn" id="btn-left">◀</div>
         <div class="t-btn" id="btn-right">▶</div>
       </div>
-      <!-- 前進後退 -->
       <div class="btn-group">
         <div class="t-btn" id="btn-back">▼</div>
         <div class="t-btn" id="btn-fwd">▲</div>
@@ -82,23 +93,54 @@
     let moveForward = false, moveBackward = false, turnLeft = false, turnRight = false;
     let yaw = 0;
     let currentStage = 0;
+    const maxStages = 50;
     let isCleared = false;
     const wallSize = 4;
     const walls = [];
     let goalMesh;
+    let currentMap = [];
 
-    const stages = [
-      [[1,1,1,1,1],[1,2,0,3,1],[1,1,1,1,1]],
-      [[1,1,1,1,1,1],[1,2,0,1,3,1],[1,1,0,1,0,1],[1,1,0,0,0,1],[1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1],[1,2,0,0,1,0,1],[1,1,1,0,1,0,1],[1,3,0,0,0,0,1],[1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1],[1,2,0,1,0,0,3,1],[1,1,0,1,0,1,1,1],[1,0,0,0,0,1,1,1],[1,0,1,1,0,0,0,1],[1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1],[1,2,0,0,0,0,0,0,1],[1,0,1,1,1,1,1,0,1],[1,0,1,3,0,0,1,0,1],[1,0,1,1,1,0,1,0,1],[1,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,0,1],[1,1,1,0,1,0,1,0,1],[1,0,0,0,0,0,1,3,1],[1,0,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1,1],[1,2,0,1,0,0,0,1,0,1],[1,1,0,1,0,1,0,1,0,1],[1,0,0,0,0,1,0,0,0,1],[1,0,1,1,1,1,1,1,0,1],[1,0,0,0,0,0,0,0,3,1],[1,1,1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,1,0,3,1],[1,0,1,0,1,0,1,1,0,1,1],[1,0,1,0,0,0,0,0,0,0,1],[1,1,1,1,1,0,1,1,1,0,1],[1,0,0,0,0,0,1,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,0,1,0,0,0,0,0,1],[1,1,1,1,0,1,0,1,1,1,0,1],[1,0,0,0,0,0,0,1,3,1,0,1],[1,0,1,1,1,1,0,1,0,1,0,1],[1,0,0,0,0,1,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1]],
-      [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,2,0,0,1,0,0,0,0,0,1,0,0,0,1],[1,1,1,0,1,0,1,1,1,0,1,0,1,0,1],[1,0,0,0,0,0,1,0,1,0,0,0,1,0,1],[1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],[1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],[1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],[1,1,1,1,1,0,1,1,1,0,1,1,1,0,1],[1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,1,1,1,1,1,0,1,1,1,0,1,1,1],[1,0,0,0,1,0,0,0,1,0,0,0,0,3,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
-    ];
+    // 自動迷路生成アルゴリズム（穴掘り法）
+    function generateMaze(stageIndex) {
+      // ステージが進むほど迷路のサイズを徐々に大きくする（奇数サイズ）
+      const size = 5 + Math.floor(stageIndex / 2) * 2; 
+      const rows = size;
+      const cols = size;
+
+      // 全て壁(1)で初期化
+      const map = Array.from({ length: rows }, () => Array(cols).fill(1));
+
+      function dig(r, c) {
+        map[r][c] = 0;
+        const dirs = [
+          [-2, 0], [2, 0], [0, -2], [0, 2]
+        ].sort(() => Math.random() - 0.5);
+
+        for (let [dr, dc] of dirs) {
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && map[nr][nc] === 1) {
+            map[r + dr / 2][c + dc / 2] = 0;
+            dig(nr, nc);
+          }
+        }
+      }
+
+      // スタート位置から掘り進める
+      dig(1, 1);
+      map[1][1] = 2; // スタート (2)
+
+      // ゴール位置の設定（右下の通路）
+      let gr = rows - 2;
+      let gc = cols - 2;
+      while (map[gr][gc] === 1) {
+        gc--;
+        if (gc < 1) { gc = cols - 2; gr--; }
+      }
+      map[gr][gc] = 3; // ゴール (3)
+
+      return map;
+    }
 
     function init() {
       const container = document.getElementById('viewport');
@@ -131,14 +173,15 @@
       camera.add(playerLight);
       scene.add(camera);
 
-      const map = stages[index];
+      // ステージごとにマップを自動生成
+      currentMap = generateMaze(index);
       const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
       const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
       const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
       const wallGeo = new THREE.BoxGeometry(wallSize, wallSize, wallSize);
 
-      for (let r = 0; r < map.length; r++) {
-        for (let c = 0; c < map[r].length; c++) {
+      for (let r = 0; r < currentMap.length; r++) {
+        for (let c = 0; c < currentMap[r].length; c++) {
           const x = c * wallSize;
           const z = r * wallSize;
 
@@ -152,16 +195,16 @@
           ceiling.position.set(x, wallSize, z);
           scene.add(ceiling);
 
-          if (map[r][c] === 1) {
+          if (currentMap[r][c] === 1) {
             const wall = new THREE.Mesh(wallGeo, wallMat);
             wall.position.set(x, wallSize / 2, z);
             scene.add(wall);
             walls.push(new THREE.Box3().setFromObject(wall));
-          } else if (map[r][c] === 2) {
+          } else if (currentMap[r][c] === 2) {
             camera.position.set(x, 1.6, z);
             yaw = 0;
             camera.rotation.y = 0;
-          } else if (map[r][c] === 3) {
+          } else if (currentMap[r][c] === 3) {
             const goalGeo = new THREE.CylinderGeometry(1, 1, 3, 16);
             const goalMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true });
             goalMesh = new THREE.Mesh(goalGeo, goalMat);
@@ -175,9 +218,49 @@
         }
       }
 
-      document.getElementById('stage-info').innerText = `STAGE ${index + 1} / ${stages.length}`;
+      document.getElementById('stage-info').innerText = `STAGE ${index + 1} / ${maxStages}`;
       document.getElementById('overlay').style.display = 'none';
       isCleared = false;
+    }
+
+    function drawMinimap() {
+      const canvas = document.getElementById('minimap');
+      const ctx = canvas.getContext('2d');
+      const rows = currentMap.length;
+      const cols = currentMap[0].length;
+
+      const cellSize = Math.min(100 / cols, 100 / rows);
+      canvas.width = cols * cellSize;
+      canvas.height = rows * cellSize;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (currentMap[r][c] === 1) {
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          } else if (currentMap[r][c] === 3) {
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      const px = (camera.position.x / wallSize) * cellSize;
+      const pz = (camera.position.z / wallSize) * cellSize;
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(px, pz, cellSize / 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px, pz);
+      ctx.lineTo(px - Math.sin(yaw) * cellSize * 1.2, pz - Math.cos(yaw) * cellSize * 1.2);
+      ctx.stroke();
     }
 
     function setupControls() {
@@ -229,7 +312,7 @@
     }
 
     function nextStage() {
-      if (currentStage < stages.length - 1) {
+      if (currentStage < maxStages - 1) {
         currentStage++;
         loadStage(currentStage);
       } else {
@@ -277,6 +360,8 @@
             showClearScreen();
           }
         }
+
+        drawMinimap();
       }
 
       renderer.render(scene, camera);
@@ -288,13 +373,13 @@
       const desc = document.getElementById('clear-desc');
       const btn = document.getElementById('next-btn');
 
-      if (currentStage < stages.length - 1) {
+      if (currentStage < maxStages - 1) {
         title.innerText = `STAGE ${currentStage + 1} CLEAR!`;
         desc.innerText = "次のステージへ進もう！";
         btn.innerText = "NEXT STAGE";
       } else {
-        title.innerText = "🎉 ALL STAGES CLEAR! 🎉";
-        desc.innerText = "全10ステージクリア！おめでとう！";
+        title.innerText = "🎉 ALL 50 STAGES CLEAR! 🎉";
+        desc.innerText = "全50ステージ完全制覇！凄すぎる！";
         btn.innerText = "最初から遊ぶ";
       }
 
