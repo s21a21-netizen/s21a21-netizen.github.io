@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論理回路シミュレーター</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #181825;
+            padding: 12px 20px;
+            border-bottom: 1px solid #313244;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            color: #cba6f7;
+            margin-right: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            background-color: #313244;
+            color: #cdd6f4;
+            border: 1px solid #45475a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #45475a;
+            border-color: #585b70;
+        }
+
+        button.danger {
+            background-color: #f38ba8;
+            color: #11111b;
+            border: none;
+            font-weight: bold;
+        }
+
+        button.danger:hover {
+            background-color: #eba0ac;
+        }
+
+        #workspace {
+            flex: 1;
+            position: relative;
+            background-image: 
+                radial-gradient(#313244 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+        }
+
+        svg#wire-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        wire-path {
+            fill: none;
+            stroke-width: 3;
+            pointer-events: stroke;
+            cursor: pointer;
+        }
+
+        .node {
+            position: absolute;
+            background-color: #181825;
+            border: 2px solid #45475a;
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 100px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+
+        .node.selected {
+            border-color: #cba6f7;
+            box-shadow: 0 0 10px rgba(203, 166, 247, 0.4);
+        }
+
+        .node-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #a6adc8;
+            text-transform: uppercase;
+        }
+
+        .port-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .ports-left, .ports-right {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .port {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #45475a;
+            border: 2px solid #313244;
+            cursor: crosshair;
+            transition: transform 0.1s;
+        }
+
+        .port:hover {
+            transform: scale(1.3);
+            background-color: #f5e0dc;
+        }
+
+        .port.active {
+            background-color: #a6e3a1;
+            box-shadow: 0 0 8px #a6e3a1;
+        }
+
+        /* コンポーネント固有スタイル */
+        .switch-btn {
+            width: 40px;
+            height: 24px;
+            border-radius: 12px;
+            background-color: #45475a;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .switch-btn::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #cdd6f4;
+            transition: transform 0.2s;
+        }
+
+        .switch-btn.on {
+            background-color: #a6e3a1;
+        }
+
+        .switch-btn.on::after {
+            transform: translateX(16px);
+        }
+
+        .led-light {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #313244;
+            border: 2px solid #45475a;
+            transition: all 0.2s;
+        }
+
+        .led-light.on {
+            background-color: #f9e2af;
+            box-shadow: 0 0 20px #f9e2af, 0 0 40px #f9e2af;
+            border-color: #fff;
+        }
+
+        .gate-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #89b4fa;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background-color: rgba(24, 24, 37, 0.85);
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #a6adc8;
+            pointer-events: none;
+            border: 1px solid #313244;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Logic Craft</h1>
+        <div class="btn-group">
+            <button onclick="addNode('SWITCH')">+ スイッチ</button>
+            <button onclick="addNode('AND')">+ AND</button>
+            <button onclick="addNode('OR')">+ OR</button>
+            <button onclick="addNode('NOT')">+ NOT</button>
+            <button onclick="addNode('XOR')">+ XOR</button>
+            <button onclick="addNode('NAND')">+ NAND</button>
+            <button onclick="addNode('NOR')">+ NOR</button>
+            <button onclick="addNode('LED')">+ LED</button>
+        </div>
+        <button class="danger" onclick="clearWorkspace()" style="margin-left: auto;">全削除</button>
+    </header>
+
+    <div id="workspace">
+        <svg id="wire-canvas">
+            <path id="drag-wire" fill="none" stroke="#f5e0dc" stroke-width="3" stroke-dasharray="5,5" style="display:none;"></path>
+        </svg>
+        <div class="instructions">
+            ・端子（丸）から端子へドラッグして配線<br>
+            ・ノードをドラッグして移動 / ダブルクリックで削除<br>
+            ・スイッチをクリックしてON/OFF切替
+        </div>
+    </div>
+
+    <script>
+        const workspace = document.getElementById('workspace');
+        const wireCanvas = document.getElementById('wire-canvas');
+        const dragWire = document.getElementById('drag-wire');
+
+        let nodes = [];
+        let connections = [];
+        let nodeIdCounter = 0;
+        let activePort = null;
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        // ノードの定義
+        const NODE_TYPES = {
+            SWITCH: { name: 'Switch', inputs: 0, outputs: 1 },
+            AND:   { name: 'AND',   inputs: 2, outputs: 1 },
+            OR:    { name: 'OR',    inputs: 2, outputs: 1 },
+            NOT:   { name: 'NOT',   inputs: 1, outputs: 1 },
+            XOR:   { name: 'XOR',   inputs: 2, outputs: 1 },
+            NAND:  { name: 'NAND',  inputs: 2, outputs: 1 },
+            NOR:   { name: 'NOR',   inputs: 2, outputs: 1 },
+            LED:   { name: 'LED',   inputs: 1, outputs: 0 }
+        };
+
+        // ノード追加
+        function addNode(type, x = 100, y = 100) {
+            const id = 'node_' + (++nodeIdCounter);
+            const def = NODE_TYPES[type];
+            
+            const nodeData = {
+                id,
+                type,
+                x: x + Math.random() * 20,
+                y: y + Math.random() * 20,
+                state: false,
+                inputs: Array(def.inputs).fill(false)
+            };
+
+            nodes.push(nodeData);
+            renderNode(nodeData);
+            evaluateCircuit();
+        }
+
+        // ノードHTMLレンダリング
+        function renderNode(data) {
+            const def = NODE_TYPES[data.type];
+            const el = document.createElement('div');
+            el.className = 'node';
+            el.id = data.id;
+            el.style.left = data.x + 'px';
+            el.style.top = data.y + 'px';
+
+            let bodyContent = '';
+            if (data.type === 'SWITCH') {
+                bodyContent = `<div class="switch-btn" id="sw_${data.id}"></div>`;
+            } else if (data.type === 'LED') {
+                bodyContent = `<div class="led-light" id="led_${data.id}"></div>`;
+            } else {
+                bodyContent = `<div class="gate-label">${data.type}</div>`;
+            }
+
+            let leftPorts = '';
+            for (let i = 0; i < def.inputs; i++) {
+                leftPorts += `<div class="port input-port" data-node="${data.id}" data-type="input" data-index="${i}"></div>`;
+            }
+
+            let rightPorts = '';
+            for (let i = 0; i < def.outputs; i++) {
+                rightPorts += `<div class="port output-port" data-node="${data.id}" data-type="output" data-index="${i}"></div>`;
+            }
+
+            el.innerHTML = `
+                <div class="node-title">${def.name}</div>
+                <div class="port-container">
+                    <div class="ports-left">${leftPorts}</div>
+                    ${bodyContent}
+                    <div class="ports-right">${rightPorts}</div>
+                </div>
+            `;
+
+            // イベント付与
+            el.addEventListener('mousedown', (e) => onNodeMouseDown(e, data));
+            el.addEventListener('dblclick', () => removeNode(data.id));
+
+            if (data.type === 'SWITCH') {
+                const sw = el.querySelector('.switch-btn');
+                sw.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    data.state = !data.state;
+                    sw.classList.toggle('on', data.state);
+                    evaluateCircuit();
+                });
+            }
+
+            workspace.appendChild(el);
+            bindPorts(el);
+        }
+
+        // ポートイベントバインド
+        function bindPorts(nodeEl) {
+            const ports = nodeEl.querySelectorAll('.port');
+            ports.forEach(port => {
+                port.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    const rect = port.getBoundingClientRect();
+                    const wsRect = workspace.getBoundingClientRect();
+                    activePort = {
+                        nodeId: port.dataset.node,
+                        type: port.dataset.type,
+                        index: parseInt(port.dataset.index),
+                        x: rect.left + rect.width / 2 - wsRect.left,
+                        y: rect.top + rect.height / 2 - wsRect.top
+                    };
+                    dragWire.style.display = 'block';
+                });
+            });
+        }
+
+        // マウスイベント (ドラッグ移動・配線)
+        window.addEventListener('mousemove', (e) => {
+            const wsRect = workspace.getBoundingClientRect();
+            const mouseX = e.clientX - wsRect.left;
+            const mouseY = e.clientY - wsRect.top;
+
+            if (draggedNode) {
+                draggedNode.x = mouseX - dragOffset.x;
+                draggedNode.y = mouseY - dragOffset.y;
+                const el = document.getElementById(draggedNode.id);
+                el.style.left = draggedNode.x + 'px';
+                el.style.top = draggedNode.y + 'px';
+                updateWires();
+            }
+
+            if (activePort) {
+                const p1 = activePort;
+                const pathStr = createBezierPath(p1.x, p1.y, mouseX, mouseY);
+                dragWire.setAttribute('d', pathStr);
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (draggedNode) {
+                draggedNode = null;
+            }
+
+            if (activePort) {
+                const target = document.elementFromPoint(e.clientX, e.clientY);
+                if (target && target.classList.contains('port')) {
+                    const targetType = target.dataset.type;
+                    const targetNodeId = target.dataset.node;
+                    const targetIndex = parseInt(target.dataset.index);
+
+                    // 出力 -> 入力 への接続のみ許可
+                    if (activePort.type !== targetType && activePort.nodeId !== targetNodeId) {
+                        const from = activePort.type === 'output' ? activePort : { nodeId: targetNodeId, type: targetType, index: targetIndex };
+                        const to = activePort.type === 'input' ? activePort : { nodeId: targetNodeId, type: targetType, index: targetIndex };
+
+                        // 既存の同じ入力への接続を削除（1つの入力には1つの出力のみ）
+                        connections = connections.filter(c => !(c.toNode === to.nodeId && c.toIndex === to.index));
+
+                        connections.push({
+                            fromNode: from.nodeId,
+                            fromIndex: from.index,
+                            toNode: to.nodeId,
+                            toIndex: to.index
+                        });
+
+                        evaluateCircuit();
+                    }
+                }
+                activePort = null;
+                dragWire.style.display = 'none';
+            }
+        });
+
+        function onNodeMouseDown(e, data) {
+            draggedNode = data;
+            const rect = document.getElementById(data.id).getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+        }
+
+        // ベジェ曲線パス生成
+        function createBezierPath(x1, y1, x2, y2) {
+            const dx = Math.abs(x2 - x1) * 0.5;
+            return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+        }
+
+        // ワイヤーの描画更新
+        function updateWires() {
+            // ドラッグ線以外の既存線描画
+            const existingWires = wireCanvas.querySelectorAll('.wire-path');
+            existingWires.forEach(w => w.remove());
+
+            const wsRect = workspace.getBoundingClientRect();
+
+            connections.forEach((conn, index) => {
+                const fromEl = document.querySelector(`#${conn.fromNode} .output-port[data-index="${conn.fromIndex}"]`);
+                const toEl = document.querySelector(`#${conn.toNode} .input-port[data-index="${conn.toIndex}"]`);
+
+                if (fromEl && toEl) {
+                    const fRect = fromEl.getBoundingClientRect();
+                    const tRect = toEl.getBoundingClientRect();
+
+                    const x1 = fRect.left + fRect.width / 2 - wsRect.left;
+                    const y1 = fRect.top + fRect.height / 2 - wsRect.top;
+                    const x2 = tRect.left + tRect.width / 2 - wsRect.left;
+                    const y2 = tRect.top + tRect.height / 2 - wsRect.top;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', createBezierPath(x1, y1, x2, y2));
+                    path.setAttribute('class', 'wire-path');
+                    
+                    const fromNodeData = nodes.find(n => n.id === conn.fromNode);
+                    const isActive = fromNodeData ? fromNodeData.state : false;
+
+                    path.setAttribute('stroke', isActive ? '#f9e2af' : '#45475a');
+                    if (isActive) {
+                        path.setAttribute('style', 'filter: drop-shadow(0 0 5px #f9e2af);');
+                    }
+
+                    // 右クリックまたはダブルクリックでワイヤー削除
+                    path.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        connections.splice(index, 1);
+                        evaluateCircuit();
+                    });
+
+                    wireCanvas.appendChild(path);
+                }
+            });
+        }
+
+        // 回路の評価（シミュレーション実行）
+        function evaluateCircuit() {
+            // 複数トポロジー伝搬のため数回反復評価
+            for (let iter = 0; iter < 5; iter++) {
+                nodes.forEach(node => {
+                    if (node.type === 'SWITCH') return;
+
+                    // 入力信号の集計
+                    const def = NODE_TYPES[node.type];
+                    const inSignals = Array(def.inputs).fill(false);
+
+                    connections.forEach(conn => {
+                        if (conn.toNode === node.id) {
+                            const sourceNode = nodes.find(n => n.id === conn.fromNode);
+                            if (sourceNode) {
+                                inSignals[conn.toIndex] = sourceNode.state;
+                            }
+                        }
+                    });
+
+                    node.inputs = inSignals;
+
+                    // 論理演算
+                    switch (node.type) {
+                        case 'AND':  node.state = inSignals[0] && inSignals[1]; break;
+                        case 'OR':   node.state = inSignals[0] || inSignals[1]; break;
+                        case 'NOT':  node.state = !inSignals[0]; break;
+                        case 'XOR':  node.state = inSignals[0] !== inSignals[1]; break;
+                        case 'NAND': node.state = !(inSignals[0] && inSignals[1]); break;
+                        case 'NOR':  node.state = !(inSignals[0] || inSignals[1]); break;
+                        case 'LED':  node.state = inSignals[0]; break;
+                    }
+                });
+            }
+
+            // ビジュアルの更新
+            nodes.forEach(node => {
+                if (node.type === 'LED') {
+                    const led = document.getElementById(`led_${node.id}`);
+                    if (led) led.classList.toggle('on', node.state);
+                }
+                
+                // ポートの発光更新
+                const el = document.getElementById(node.id);
+                if (el) {
+                    const outPort = el.querySelector('.output-port');
+                    if (outPort) outPort.classList.toggle('active', node.state);
+                }
+            });
+
+            updateWires();
+        }
+
+        // ノード削除
+        function removeNode(id) {
+            nodes = nodes.filter(n => n.id !== id);
+            connections = connections.filter(c => c.fromNode !== id && c.toNode !== id);
+            const el = document.getElementById(id);
+            if (el) el.remove();
+            evaluateCircuit();
+        }
+
+        // 全クリア
+        function clearWorkspace() {
+            nodes = [];
+            connections = [];
+            document.querySelectorAll('.node').forEach(n => n.remove());
+            evaluateCircuit();
+        }
+
+        // 初期サンプル回路を作成
+        window.onload = () => {
+            addNode('SWITCH', 100, 150);
+            addNode('SWITCH', 100, 280);
+            addNode('AND', 300, 200);
+            addNode('LED', 500, 210);
+
+            // 自動配線
+            connections.push(
+                { fromNode: 'node_1', fromIndex: 0, toNode: 'node_3', toIndex: 0 },
+                { fromNode: 'node_2', fromIndex: 0, toNode: 'node_3', toIndex: 1 },
+                { fromNode: 'node_3', fromIndex: 0, toNode: 'node_4', toIndex: 0 }
+            );
+
+            setTimeout(evaluateCircuit, 100);
+        };
+    </script>
+</body>
+</html>
