@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>曲当てクイズ！</title>
+  <title>楽曲ストーリー当てクイズ (全20問)</title>
   <style>
     * {
       box-sizing: border-box;
@@ -25,7 +25,7 @@
       border-radius: 16px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
       width: 100%;
-      max-width: 500px;
+      max-width: 550px;
       padding: 30px;
       text-align: center;
     }
@@ -38,7 +38,7 @@
       color: #1a73e8;
       font-size: 14px;
       font-weight: bold;
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       margin-bottom: 10px;
     }
@@ -51,13 +51,13 @@
       border: 1px solid #eee;
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       text-align: left;
     }
     .question-title {
       font-weight: bold;
       font-size: 14px;
-      color: #666;
+      color: #1a73e8;
       margin-bottom: 8px;
     }
     .question-text {
@@ -68,11 +68,22 @@
     .hint-box {
       background: #fff8e1;
       border-left: 4px solid #ffb300;
-      padding: 10px 14px;
+      padding: 12px;
       margin-top: 12px;
-      font-size: 13px;
+      font-size: 13.5px;
       color: #5d4037;
+      border-radius: 0 8px 8px 0;
       display: none;
+      text-align: left;
+    }
+    .btn-hint {
+      background: none;
+      border: none;
+      color: #1a73e8;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-bottom: 15px;
     }
     .options {
       display: flex;
@@ -85,11 +96,12 @@
       border: 2px solid #e0e0e0;
       border-radius: 10px;
       padding: 14px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       color: #333;
       cursor: pointer;
       transition: all 0.2s ease;
+      text-align: left;
     }
     .btn-option:hover {
       border-color: #1a73e8;
@@ -105,15 +117,6 @@
       border-color: #ea4335;
       color: #c5221f;
     }
-    .btn-hint {
-      background: none;
-      border: none;
-      color: #1a73e8;
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: underline;
-      margin-bottom: 15px;
-    }
     .result-message {
       font-size: 18px;
       font-weight: bold;
@@ -125,7 +128,7 @@
       color: #fff;
       border: none;
       border-radius: 10px;
-      padding: 12px 24px;
+      padding: 14px;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
@@ -135,79 +138,217 @@
     .btn-next:hover {
       background: #1557b0;
     }
+    .score-view {
+      display: none;
+    }
+    .score-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1a73e8;
+      margin-bottom: 15px;
+    }
+    .score-detail {
+      font-size: 20px;
+      margin-bottom: 25px;
+    }
   </style>
 </head>
 <body>
 
 <div class="quiz-card">
-  <div class="header">
-    <span class="badge" id="quiz-count">第 1 問 / 全 3 問</span>
-    <h1>この曲な〜んだ？</h1>
+  <!-- クイズ画面 -->
+  <div id="quiz-view">
+    <div class="header">
+      <span class="badge" id="quiz-count">第 1 問 / 全 20 問</span>
+      <h1>この曲な〜んだ？</h1>
+    </div>
+
+    <div class="question-box">
+      <div class="question-title">💡 テーマ・ストーリー</div>
+      <div class="question-text" id="question-text">読み込み中...</div>
+      <div class="hint-box" id="hint-box"></div>
+    </div>
+
+    <button class="btn-hint" id="btn-hint" onclick="toggleHint()">ヒントを見る</button>
+
+    <div class="options" id="options-container"></div>
+
+    <div class="result-message" id="result-message"></div>
+
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">次の問題へ</button>
   </div>
 
-  <div class="question-box">
-    <div class="question-title">💡 曲のテーマ・ストーリー</div>
-    <div class="question-text" id="question-text">読み込み中...</div>
-    <div class="hint-box" id="hint-box"></div>
+  <!-- 結果画面 -->
+  <div id="score-view" class="score-view">
+    <div class="score-title">🎉 クイズ終了！</div>
+    <div class="score-detail" id="score-detail">20問中 0問正解！</div>
+    <button class="btn-next" style="display:block;" onclick="restartQuiz()">もう一度挑戦する（ランダム再配置）</button>
   </div>
-
-  <button class="btn-hint" id="btn-hint" onclick="toggleHint()">ヒントを見る</button>
-
-  <div class="options" id="options-container">
-    <!-- 選択肢がJavaScriptで生成される -->
-  </div>
-
-  <div class="result-message" id="result-message"></div>
-
-  <button class="btn-next" id="btn-next" onclick="nextQuestion()">次の問題へ</button>
 </div>
 
 <script>
-  // クイズのデータ（ここに問題を追加・編集できるよ！）
-  const quizData = [
+  // 手抜きなし全20問のデータベース
+  const originalQuizData = [
     {
-      story: "深夜のドライブや都会の夜景を思わせる切ない雰囲気が特徴。夜の街を舞台に、過ぎ去った恋や戻らない時間への思いを静かに振り返る楽曲だよ。",
-      hint: "ヒント：昭和〜平成初期のCity Popの名曲！「真夜中のドア」を叩くフレーズが有名だよ。",
-      options: [
-        "真夜中のドア〜Stay With Me (松原みき)",
-        "フライディ・チャイナタウン (泰葉)",
-        "RIDE ON TIME (山下達郎)",
-        "プラスティック・ラブ (竹内まりや)"
-      ],
-      answer: 0
+      story: "深夜のドライブや都会の夜景を思わせるアーバンな雰囲気が特徴。夜の街を舞台に、過ぎ去った恋や戻らない時間への思いを静かに振り返るシティ・ポップの金字塔。",
+      hint: "ヒント：松原みきの大ヒット曲。「真夜中のドア」というフレーズが印象的。",
+      options: ["真夜中のドア〜Stay With Me", "フライディ・チャイナタウン", "プラスティック・ラブ", "RIDE ON TIME"],
+      answer: "真夜中のドア〜Stay With Me"
     },
     {
-      story: "テクノポップの金字塔的なインストゥルメンタル楽曲！馬が駆け抜けるような爽快なリズムとキャッチーなメロディが特徴で、競馬中継などでもよく使われているよ。",
-      hint: "ヒント：YMO（Yellow Magic Orchestra）の代表曲のひとつ！",
-      options: [
-        "TECHNOPOLIS",
-        "RYDEEN",
-        "東風 (Tong Poo)",
-        "COMPUTER GAME"
-      ],
-      answer: 1
+      story: "テクノポップの歴史的名曲。疾走感のあるリズムとキャッチーなメロディラインが魅力的なインストゥルメンタル楽曲で、馬が力強く駆け抜けるような情景が浮かぶ。",
+      hint: "ヒント：YMO（Yellow Magic Orchestra）の代表曲。名前は雷電から。",
+      options: ["RYDEEN", "TECHNOPOLIS", "東風 (Tong Poo)", "COMPUTER GAME"],
+      answer: "RYDEEN"
     },
     {
-      story: "桜が舞う季節の別れと旅立ちを描いた切ない名曲。離れていても変わらない絆や、未来に向かって歩き出す強い決意が込められているよ。",
-      hint: "ヒント：合唱曲としても大人気！「さくら」から始まるタイトルのあの曲だよ。",
-      options: [
-        "桜坂 (福山雅治)",
-        "さくら (独唱) (森山直太朗)",
-        "SAKURA (いきものがかり)",
-        "桜 (コブクロ)"
-      ],
-      answer: 1
+      story: "ボカロPVの世界観を色濃く反映した疾走感溢れるポップソング。アップテンポなメロディに乗せて、淡い恋心や青い春の情景、等身大の若者の感情を描いている。",
+      hint: "ヒント：YOASOBIのデビュー曲。小説『タナトスの誘惑』が原作。",
+      options: ["夜に駆ける", "群青", "アイドル", "怪獣の花唄"],
+      answer: "夜に駆ける"
+    },
+    {
+      story: "桜が舞い散る季節の別れと旅立ちを描いた切ないバラード。離れていても変わらない強い絆や、未来に向かって歩き出す決意が美しいメロディとともに表現されている。",
+      hint: "ヒント：森山直太朗の代表曲で、卒業ソングや合唱曲としても親しまれている。",
+      options: ["さくら (独唱)", "桜坂", "SAKURA", "桜"],
+      answer: "さくら (独唱)"
+    },
+    {
+      story: "圧倒的なアイドル性と、その裏に隠された孤独や嘘、葛藤を描いた現代的なポップソング。華やかなステージの裏側にあるプロフェッショナルな生き様をドラマチックに表現。",
+      hint: "ヒント：アニメ『【推しの子】』のオープニングテーマとして世界的に大ヒット。",
+      options: ["アイドル", "ミックスナッツ", "新時代", "残響散歌"],
+      answer: "アイドル"
+    },
+    {
+      story: "東洋的なオリエンタルセンスと先端的な電子サウンドが融合したテクノポップ初期の大作。アジアの力強さやエキゾチックな情景を想起させる旋律が緻密に組み上げられている。",
+      hint: "ヒント：坂本龍一作曲によるYMOの代表曲。中国の映画・文学作品にインスパイアされた。",
+      options: ["東風 (Tong Poo)", "千のナイフ", "Merry Christmas, Mr. Lawrence", "BEHIND THE MASK"],
+      answer: "東風 (Tong Poo)"
+    },
+    {
+      story: "夏の終わりや過ぎ去った青春の記憶、二度と戻らない一瞬のきらめきを描いたロックナンバー。疾走感の中にどこか切なさと哀愁が漂う詩的な世界観。",
+      hint: "ヒント：Vaundyの代表曲。カラオケランキングでも長期間上位を維持している。",
+      options: ["怪獣の花唄", "踊り子", "不可幸力", "napori"],
+      answer: "怪獣の花唄"
+    },
+    {
+      story: "雪が降る冬の街角を舞台に、大切な人と過ごす愛おしい時間を表現した珠玉のラヴ・バラード。透明感あふれる歌声と切ないメロディが心に染み渡る。",
+      hint: "ヒント：中島美嘉の冬の定番ソング。数多くのアーティストにカバーされている。",
+      options: ["雪の華", "White Love", "津軽海峡・冬景色", "Everything"],
+      answer: "雪の華"
+    },
+    {
+      story: "自分の弱さや過ちを受け入れながら、それでも前に進み続けるという強い覚悟を歌った疾走感あるロックチューン。激しいドラムと叙情的な旋律が心を揺さぶる。",
+      hint: "ヒント：Official髭男dismの代表曲。アニメ『東京リベンジャーズ』主題歌。",
+      options: ["Cry Baby", "Pretender", "ミックスナッツ", "Subtitle"],
+      answer: "Cry Baby"
+    },
+    {
+      story: "美しいピアノのイントロから始まり、戦争の不条理さや静寂な祈り、人間の孤独を感じさせる繊細で壮大なインストゥルメンタル楽曲。",
+      hint: "ヒント：坂本龍一が映画のために書き下ろし、自らも出演した映画のメインテーマ。",
+      options: ["Merry Christmas, Mr. Lawrence", "Energy Flow", "Aqua", "Rain"],
+      answer: "Merry Christmas, Mr. Lawrence"
+    },
+    {
+      story: "切ない片思いの心情をポップかつ繊細なメロディに乗せて描いた楽曲。「自分は主人公にはなれない」という切なくも共感度の高い歌詞が胸を打つ。",
+      hint: "ヒント：Official髭男dismのメガヒット曲。「グッバイ」の第一声が強烈。",
+      options: ["Pretender", "宿命", "115万キロのフィルム", "I LOVE..."],
+      answer: "Pretender"
+    },
+    {
+      story: "未来都市「TOKYO」を思わせるシンセサイザーのボイスボコーダーとエレクトロビートが交錯する楽曲。都市の先進感と躍動感を音で体現した近未来サウンド。",
+      hint: "ヒント：YMOの代表曲で「TOKIO!」というボコーダーボイスが有名。",
+      options: ["TECHNOPOLIS", "RYDEEN", "SOLID STATE SURVIVOR", "CUE"],
+      answer: "TECHNOPOLIS"
+    },
+    {
+      story: "言葉にしきれない深い愛や感謝の気持ちを、ソウルフルで壮大なヴォーカルで歌い上げたバラード。ドラマティックな曲展開が聴く者を魅了する。",
+      hint: "ヒント：MISIAの大ヒット曲。ドラマ『ヤマトナデシコ』主題歌。",
+      options: ["Everything", "逢いたくていま", "オルフェンズの涙", "つつみ込むように..."],
+      answer: "Everything"
+    },
+    {
+      story: "圧倒的な自由と新しい時代の幕開けを提示するエネルギッシュな楽曲。パワフルな歌声と先進的なビートが圧倒的な没入感を生み出している。",
+      hint: "ヒント：Adoが歌う劇場版アニメ『ONE PIECE FILM RED』の主題歌。",
+      options: ["新時代", "うっせぇわ", "逆光", "Tot Musica"],
+      answer: "新時代"
+    },
+    {
+      story: "都会の夜の華やかさと裏腹にある虚無感や退屈を描いたディスコ調のシティ・ポップ。洗練されたベースラインとノスタルジックな雰囲気が特徴。",
+      hint: "ヒント：竹内まりやの楽曲で、海外から火がついて世界的な再評価を受けた。",
+      options: ["プラスティック・ラブ", "駅", "元気を出して", "シングル・アゲイン"],
+      answer: "プラスティック・ラブ"
+    },
+    {
+      story: "静かな冬の寒さと心の温もりを比喩的に表現したラブソング。溢れる想いが雪のように降り積もっていく様子を繊細かつドラマチックに歌い上げている。",
+      hint: "ヒント：Official髭男dismの冬のヒット曲。ドラマ『silent』主題歌。",
+      options: ["Subtitle", "Pretender", "Laughter", "Anarchy"],
+      answer: "Subtitle"
+    },
+    {
+      story: "夕暮れ時の切ないグラデーションや、若者の移ろいやすい心情を表現したミディアムナンバー。心地よいグルーヴとアンニュイなヴォーカルが癖になる。",
+      hint: "ヒント：Vaundyの代表曲。MVには小松菜奈が出演したことでも話題に。",
+      options: ["踊り子", "不可幸力", "東京フラッシュ", "花占い"],
+      answer: "踊り子"
+    },
+    {
+      story: "打ち上げ花火が夜空に上がって消えていく一瞬の美しさと、恋の終わりや儚い夏休みの思い出を重ね合わせた甘酸っぱいポップソング。",
+      hint: "ヒント：DAOKO×米津玄師による映画『打ち上げ花火、下から見るか？横から見るか？』主題歌。",
+      options: ["打上花火", "Lemon", "感電", "ピースサイン"],
+      answer: "打上花火"
+    },
+    {
+      story: "喪失の悲しみや消えない傷を抱えながらも、それとともに生きていく決意を描いた叙情的なバラード。哀愁を帯びたメロディと詩的な歌詞が深く心に残る。",
+      hint: "ヒント：米津玄師の代表曲。ドラマ『アンナチュラル』主題歌。",
+      options: ["Lemon", "馬と鹿", "Kick Back", "Pale Blue"],
+      answer: "Lemon"
+    },
+    {
+      story: "自分のスタイルを貫く強さと、周囲のノイズに屈しない揺るぎないアイデンティティを表現したパワフルなダンス・ロックナンバー。",
+      hint: "ヒント：King Gnuの代表曲。アニメ『呪術廻戦』第2期「渋谷事変」オープニングテーマ。",
+      options: ["SPECIALZ", "白日", "一途", "カメレオン"],
+      answer: "SPECIALZ"
     }
   ];
 
-  let currentQuiz = 0;
+  let quizList = [];
+  let currentQuizIndex = 0;
+  let score = 0;
   let isAnswered = false;
+
+  // 配列をランダムにシャッフルする関数（フィッシャー–イェーツのシャッフル）
+  function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // クイズの初期化（問題と選択肢をランダム化）
+  function initQuiz() {
+    // 問題をランダムシャッフル
+    quizList = shuffleArray(originalQuizData).map(q => {
+      // 選択肢もランダムシャッフル
+      return {
+        ...q,
+        shuffledOptions: shuffleArray(q.options)
+      };
+    });
+    currentQuizIndex = 0;
+    score = 0;
+    
+    document.getElementById("quiz-view").style.display = "block";
+    document.getElementById("score-view").style.display = "none";
+    loadQuiz();
+  }
 
   function loadQuiz() {
     isAnswered = false;
-    const q = quizData[currentQuiz];
+    const q = quizList[currentQuizIndex];
     
-    document.getElementById("quiz-count").innerText = `第 ${currentQuiz + 1} 問 / 全 ${quizData.length} 問`;
+    document.getElementById("quiz-count").innerText = `第 ${currentQuizIndex + 1} 問 / 全 ${quizList.length} 問`;
     document.getElementById("question-text").innerText = q.story;
     
     const hintBox = document.getElementById("hint-box");
@@ -221,11 +362,11 @@
     const optionsContainer = document.getElementById("options-container");
     optionsContainer.innerHTML = "";
 
-    q.options.forEach((opt, index) => {
+    q.shuffledOptions.forEach((optText) => {
       const btn = document.createElement("button");
       btn.className = "btn-option";
-      btn.innerText = opt;
-      btn.onclick = () => checkAnswer(index);
+      btn.innerText = optText;
+      btn.onclick = () => checkAnswer(optText, btn);
       optionsContainer.appendChild(btn);
     });
   }
@@ -235,44 +376,61 @@
     hintBox.style.display = hintBox.style.display === "none" ? "block" : "none";
   }
 
-  function checkAnswer(selectedIndex) {
+  function checkAnswer(selectedOption, selectedBtn) {
     if (isAnswered) return;
     isAnswered = true;
 
-    const q = quizData[currentQuiz];
+    const q = quizList[currentQuizIndex];
     const buttons = document.querySelectorAll(".btn-option");
     const resultMsg = document.getElementById("result-message");
 
-    if (selectedIndex === q.answer) {
-      buttons[selectedIndex].classList.add("correct");
+    if (selectedOption === q.answer) {
+      selectedBtn.classList.add("correct");
       resultMsg.style.color = "#34a853";
-      resultMsg.innerText = "⭕️ 正解！すごーい！";
+      resultMsg.innerText = "⭕️ 正解！素晴らしい！";
+      score++;
     } else {
-      buttons[selectedIndex].classList.add("wrong");
-      buttons[q.answer].classList.add("correct");
+      selectedBtn.classList.add("wrong");
+      // 正解のボタンを緑色にして教える
+      buttons.forEach(btn => {
+        if (btn.innerText === q.answer) {
+          btn.classList.add("correct");
+        }
+      });
       resultMsg.style.color = "#ea4335";
-      resultMsg.innerText = "❌ 残念！不正解...";
+      resultMsg.innerText = `❌ 不正解...（正解：${q.answer}）`;
     }
 
-    if (currentQuiz < quizData.length - 1) {
-      document.getElementById("btn-next").style.display = "block";
+    const nextBtn = document.getElementById("btn-next");
+    if (currentQuizIndex < quizList.length - 1) {
+      nextBtn.innerText = "次の問題へ";
     } else {
-      document.getElementById("btn-next").innerText = "最初からやり直す";
-      document.getElementById("btn-next").style.display = "block";
+      nextBtn.innerText = "結果を見る";
     }
+    nextBtn.style.display = "block";
   }
 
   function nextQuestion() {
-    currentQuiz++;
-    if (currentQuiz >= quizData.length) {
-      currentQuiz = 0;
-      document.getElementById("btn-next").innerText = "次の問題へ";
+    currentQuizIndex++;
+    if (currentQuizIndex >= quizList.length) {
+      showScore();
+    } else {
+      loadQuiz();
     }
-    loadQuiz();
   }
 
-  // 初期ロード
-  loadQuiz();
+  function showScore() {
+    document.getElementById("quiz-view").style.display = "none";
+    document.getElementById("score-view").style.display = "block";
+    document.getElementById("score-detail").innerText = `全 ${quizList.length} 問中 ${score} 問 正解！`;
+  }
+
+  function restartQuiz() {
+    initQuiz();
+  }
+
+  // 初回起動
+  initQuiz();
 </script>
 
 </body>
