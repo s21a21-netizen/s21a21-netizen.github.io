@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>曲当てクイズ！</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .quiz-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+      padding: 30px;
+      text-align: center;
+    }
+    .header {
+      margin-bottom: 20px;
+    }
+    .badge {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 22px;
+      color: #222;
+    }
+    .question-box {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .question-title {
+      font-weight: bold;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .question-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #444;
+    }
+    .hint-box {
+      background: #fff8e1;
+      border-left: 4px solid #ffb300;
+      padding: 10px 14px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #5d4037;
+      display: none;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .btn-option {
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-option:hover {
+      border-color: #1a73e8;
+      background: #f8faff;
+    }
+    .btn-option.correct {
+      background: #e6f4ea;
+      border-color: #34a853;
+      color: #137333;
+    }
+    .btn-option.wrong {
+      background: #fce8e6;
+      border-color: #ea4335;
+      color: #c5221f;
+    }
+    .btn-hint {
+      background: none;
+      border: none;
+      color: #1a73e8;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-bottom: 15px;
+    }
+    .result-message {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      min-height: 27px;
+    }
+    .btn-next {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      width: 100%;
+    }
+    .btn-next:hover {
+      background: #1557b0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="quiz-card">
+  <div class="header">
+    <span class="badge" id="quiz-count">第 1 問 / 全 3 問</span>
+    <h1>この曲な〜んだ？</h1>
+  </div>
+
+  <div class="question-box">
+    <div class="question-title">💡 曲のテーマ・ストーリー</div>
+    <div class="question-text" id="question-text">読み込み中...</div>
+    <div class="hint-box" id="hint-box"></div>
+  </div>
+
+  <button class="btn-hint" id="btn-hint" onclick="toggleHint()">ヒントを見る</button>
+
+  <div class="options" id="options-container">
+    <!-- 選択肢がJavaScriptで生成される -->
+  </div>
+
+  <div class="result-message" id="result-message"></div>
+
+  <button class="btn-next" id="btn-next" onclick="nextQuestion()">次の問題へ</button>
+</div>
+
+<script>
+  // クイズのデータ（ここに問題を追加・編集できるよ！）
+  const quizData = [
+    {
+      story: "深夜のドライブや都会の夜景を思わせる切ない雰囲気が特徴。夜の街を舞台に、過ぎ去った恋や戻らない時間への思いを静かに振り返る楽曲だよ。",
+      hint: "ヒント：昭和〜平成初期のCity Popの名曲！「真夜中のドア」を叩くフレーズが有名だよ。",
+      options: [
+        "真夜中のドア〜Stay With Me (松原みき)",
+        "フライディ・チャイナタウン (泰葉)",
+        "RIDE ON TIME (山下達郎)",
+        "プラスティック・ラブ (竹内まりや)"
+      ],
+      answer: 0
+    },
+    {
+      story: "テクノポップの金字塔的なインストゥルメンタル楽曲！馬が駆け抜けるような爽快なリズムとキャッチーなメロディが特徴で、競馬中継などでもよく使われているよ。",
+      hint: "ヒント：YMO（Yellow Magic Orchestra）の代表曲のひとつ！",
+      options: [
+        "TECHNOPOLIS",
+        "RYDEEN",
+        "東風 (Tong Poo)",
+        "COMPUTER GAME"
+      ],
+      answer: 1
+    },
+    {
+      story: "桜が舞う季節の別れと旅立ちを描いた切ない名曲。離れていても変わらない絆や、未来に向かって歩き出す強い決意が込められているよ。",
+      hint: "ヒント：合唱曲としても大人気！「さくら」から始まるタイトルのあの曲だよ。",
+      options: [
+        "桜坂 (福山雅治)",
+        "さくら (独唱) (森山直太朗)",
+        "SAKURA (いきものがかり)",
+        "桜 (コブクロ)"
+      ],
+      answer: 1
+    }
+  ];
+
+  let currentQuiz = 0;
+  let isAnswered = false;
+
+  function loadQuiz() {
+    isAnswered = false;
+    const q = quizData[currentQuiz];
+    
+    document.getElementById("quiz-count").innerText = `第 ${currentQuiz + 1} 問 / 全 ${quizData.length} 問`;
+    document.getElementById("question-text").innerText = q.story;
+    
+    const hintBox = document.getElementById("hint-box");
+    hintBox.innerText = q.hint;
+    hintBox.style.display = "none";
+    document.getElementById("btn-hint").style.display = "inline-block";
+    
+    document.getElementById("result-message").innerText = "";
+    document.getElementById("btn-next").style.display = "none";
+
+    const optionsContainer = document.getElementById("options-container");
+    optionsContainer.innerHTML = "";
+
+    q.options.forEach((opt, index) => {
+      const btn = document.createElement("button");
+      btn.className = "btn-option";
+      btn.innerText = opt;
+      btn.onclick = () => checkAnswer(index);
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  function toggleHint() {
+    const hintBox = document.getElementById("hint-box");
+    hintBox.style.display = hintBox.style.display === "none" ? "block" : "none";
+  }
+
+  function checkAnswer(selectedIndex) {
+    if (isAnswered) return;
+    isAnswered = true;
+
+    const q = quizData[currentQuiz];
+    const buttons = document.querySelectorAll(".btn-option");
+    const resultMsg = document.getElementById("result-message");
+
+    if (selectedIndex === q.answer) {
+      buttons[selectedIndex].classList.add("correct");
+      resultMsg.style.color = "#34a853";
+      resultMsg.innerText = "⭕️ 正解！すごーい！";
+    } else {
+      buttons[selectedIndex].classList.add("wrong");
+      buttons[q.answer].classList.add("correct");
+      resultMsg.style.color = "#ea4335";
+      resultMsg.innerText = "❌ 残念！不正解...";
+    }
+
+    if (currentQuiz < quizData.length - 1) {
+      document.getElementById("btn-next").style.display = "block";
+    } else {
+      document.getElementById("btn-next").innerText = "最初からやり直す";
+      document.getElementById("btn-next").style.display = "block";
+    }
+  }
+
+  function nextQuestion() {
+    currentQuiz++;
+    if (currentQuiz >= quizData.length) {
+      currentQuiz = 0;
+      document.getElementById("btn-next").innerText = "次の問題へ";
+    }
+    loadQuiz();
+  }
+
+  // 初期ロード
+  loadQuiz();
+</script>
+
+</body>
+</html>
