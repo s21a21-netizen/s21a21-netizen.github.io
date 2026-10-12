@@ -1,120 +1,226 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>サイト</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #ffffff; color: #1f2937; line-height: 1.6; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takeru's Portfolio</title>
+    <!-- Google Fonts: レトロ＆モダンなフォント -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131c2e;
+            --accent-color: #ff3366;
+            --accent-cyan: #00f0ff;
+            --text-main: #f0f4f8;
+            --text-sub: #94a3b8;
+            --border-color: #1e293b;
+        }
 
-    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background-color: rgba(255, 255, 255, 0.95); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .logo { font-size: 1.25rem; font-weight: 700; color: #111827; }
-    nav ul { display: flex; list-style: none; gap: 16px; flex-wrap: wrap; }
-    nav a { text-decoration: none; color: #4b5563; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
-    nav a:hover { color: #111827; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    .hero { position: relative; height: 240px; background: linear-gradient(135deg, #4d6682 0%, #304352 100%); display: flex; justify-content: center; align-items: center; }
-    .hero h1 { color: #ffffff; font-size: 3rem; letter-spacing: 2px; font-weight: 700; }
+        body {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 20px;
+        }
 
-    .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 340px 1fr 240px; gap: 32px; }
-    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
 
-    .form-section iframe { width: 100%; height: 520px; border: none; border-radius: 8px; }
-    .profile-section p { font-size: 0.95rem; color: #374151; margin-bottom: 16px; }
-    .profile-section .sub-text { color: #6b7280; font-size: 0.9rem; }
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            border-bottom: 2px dashed var(--border-color);
+            padding-bottom: 30px;
+        }
 
-    .links-section h3 { font-size: 0.95rem; color: #4b5563; margin-bottom: 12px; }
-    .link-card { margin-bottom: 16px; }
-    .link-card .name { font-weight: 700; font-size: 0.95rem; color: #111827; }
-    .link-card .handle { font-size: 0.85rem; color: #6b7280; margin-left: 4px; }
-    .link-card a { color: #2563eb; font-size: 0.85rem; text-decoration: none; word-break: break-all; }
-    .link-card a:hover { text-decoration: underline; }
+        h1 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2.5rem;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
 
-    .bottom-banner { max-width: 1100px; margin: 40px auto; padding: 0 20px 60px; }
-    .bottom-banner p { font-size: 1.2rem; font-weight: 700; color: #111827; line-height: 1.5; }
-  </style>
+        header p {
+            color: var(--text-sub);
+            font-size: 1.1rem;
+        }
+
+        section {
+            margin-bottom: 50px;
+        }
+
+        h2 {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-cyan);
+        }
+
+        .card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .card p {
+            color: var(--text-sub);
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            background-color: rgba(0, 240, 255, 0.1);
+            color: var(--accent-cyan);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 80px;
+            color: var(--text-sub);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
 </head>
 <body>
 
-  <header>
-    <div class="logo">サイト</div>
-    <nav>
-      <ul>
-        <li><a href="index.html">ホーム</a></li>
-        <li><a href="3d.html">3Dモデルづくり</a></li>
-        <li><a href="game.html">ゲーム</a></li>
-        <li><a href="meiro.html">MEIRO</a></
-        <li><a href="manabi.html">簡易電子回路シュミ</a></li>
-        <li><a href="musicquiz.html">曲あて</a></li>
-        <li><a href="browser.html">ウェブブラウザ</a></li>
-        <li><a href="sequencer.html">簡易シーケンサー</a></li>
-        <li><a href="synth.html">シンセサイザー</a></li>
-        <li><a href="paint.html">お絵かき</a></li>
-      </ul>
-    </nav>
-  </header>
+    <div class="container">
+        <header>
+            <h1>TAKERU'S PORTFOLIO</h1>
+            <p>Music / Retro Audio / Web Tools</p>
+        </header>
 
-  <div class="hero">
-    <h1>サイト</h1>
-  </div>
+        <!-- 音楽＆YMO -->
+        <section>
+            <h2>🎵 Music & YMO</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>YMO Physical Collection</h3>
+                    <p>レコード、CD、カセットテープなどのフィジカルメディアの収集と、名曲たちの魅力の探求。</p>
+                    <div class="tag-list">
+                        <span class="tag">YMO</span>
+                        <span class="tag">Vinyl / Cassette</span>
+                        <span class="tag">DTM</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Sound Production</h3>
+                    <p>DAWやWeb Audio API、ボコーダー処理を使ったシンセサイザー・音源制作。</p>
+                    <div class="tag-list">
+                        <span class="tag">GarageBand</span>
+                        <span class="tag">Domino</span>
+                        <span class="tag">Audacity</span>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  <div class="container">
-    <div class="form-section">
-      <iframe src="https://forms.gle/WCSAGA5wcjjP5j7eA" loading="lazy">読み込み中...</iframe>
+        <!-- レトロハードウェア・修理 -->
+        <section>
+            <h2>🔧 Hardware & Tech</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Retro Audio Repair</h3>
+                    <p>ハードオフ等で見つけたジャンク機器・レトロオーディオ（アンプ、スピーカー等）の分解・修理・動作検証。</p>
+                    <div class="tag-list">
+                        <span class="tag">Junk Audio</span>
+                        <span class="tag">Amplifier</span>
+                        <span class="tag">Maintenance</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>OS & Environment</h3>
+                    <p>レトロMacから最新Linux（Ubuntu、ChromeOS Flex）までのOSインストール・検証記録。</p>
+                    <div class="tag-list">
+                        <span class="tag">Mac OS</span>
+                        <span class="tag">Ubuntu</span>
+                        <span class="tag">ChromeOS Flex</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- プログラミング・Web作品 -->
+        <section>
+            <h2>💻 Web & Code</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Web Audio Tools</h3>
+                    <p>HTML/JavaScriptとWeb Audio APIを組み合わせた、ブラウザで動くオリジナル音響・ビジュアライザーツール。</p>
+                    <div class="tag-list">
+                        <span class="tag">HTML5/JS</span>
+                        <span class="tag">Web Audio API</span>
+                        <span class="tag">GitHub Pages</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Python & Utilities</h3>
+                    <p>日々の制作や実験を効率化するためのPythonスクリプトやちょっとした自作ユーティリティ。</p>
+                    <div class="tag-list">
+                        <span class="tag">Python</span>
+                        <span class="tag">Automation</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Takeru. Hosted on GitHub Pages.</p>
+        </footer>
     </div>
-
-    <div class="profile-section">
-      <p>こんにちは！池崎亮介です(本名じゃないっすよ)</p>
-      <p>私は、主にTwitter(現 X)で活動しています</p>
-      <p>ガジェットオタクとしていますがあんまわからないことがあるので間違えた情報だったら教えてくれると嬉しいです</p>
-      <p class="sub-text" style="margin-top: 24px;">freedom<br>everyone<br>F.Eを目標でGEMINIとこのサイトを運営しております</p>
-    </div>
-
-    <div class="links-section">
-      <h3>相互リンク</h3>
-      <div class="link-card">
-        <span class="name">Taitai2661</span><span class="handle">@taitai2661dayo</span><br>
-        <a href="https://ta26.top/" target="_blank" rel="noopener">https://ta26.top/</a>
-      </div>
-      <div class="link-card">
-        <span class="name">Agepan.vbs</span><span class="handle">@Agepan_vbs</span><br>
-        <a href="https://agepa-n.xyz/" target="_blank" rel="noopener">https://agepa-n.xyz/</a>
-      </div>
-      <div class="link-card">
-        <span class="name">みまさか</span><span class="handle">X @mimasaka_sendai N 143257806</span><br>
-        <a href="https://sp.nicovideo.jp/user/143257806?redirected=1" target="_blank" rel="noopener">https://sp.nicovideo.jp/user/143257806?redirected=1</a>
-      </div>
-      <div class="link-card">
-        <span class="name">Hikaproj</span><span class="handle">@hikaproj</span><br>
-        <a href="https://t.co/M3mROYYK9g" target="_blank" rel="noopener">https://t.co/M3mROYYK9g</a>
-      </div>
-      <div class="link-card">
-        <span class="name">ゆん</span><span class="handle">@yuyun_ps274</span><br>
-        <a href="https://x.com/yuyun_ps274" target="_blank" rel="noopener">https://x.com/yuyun_ps274</a>
-      </div>
-      <div class="link-card">
-        <span class="name">すある</span><span class="handle">@suasan_2525</span><br>
-        <a href="https://x.com/suasan_2525" target="_blank" rel="noopener">https://x.com/suasan_2525</a>
-      </div>
-      <div class="link-card">
-        <span class="name">OC @第二拠点</span><span class="handle">@11359OC</span><br>
-        <a href="https://x.com/11359OC" target="_blank" rel="noopener">https://x.com/11359OC</a>
-      </div>
-      <div class="link-card">
-        <span class="name">ちくわ練り物</span><span class="handle">@hyper_os3</span><br>
-        <a href="https://tikuwa.me" target="_blank" rel="noopener">tikuwa.me</a>
-      </div>
-      <p style="font-size: 0.85rem; color: #6b7280; margin-top: 20px;">ここの欄募集中</p>
-    </div>
-  </div>
-
-  <div class="bottom-banner">
-    <p>これらすべて人工知能によって作られた物です（リンクのやつは全部うちがやってるけどね）<br>気に入ってくれたらうれしいとのことです！</p>
-  </div>
 
 </body>
 </html>
