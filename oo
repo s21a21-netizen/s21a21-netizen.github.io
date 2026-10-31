@@ -1,0 +1,730 @@
+midiフ１
+
+<div style="
+
+background: #111827;
+
+color: #10B981;
+
+font-family: 'Courier New', monospace;
+
+border: 3px solid #10B981;
+
+border-radius: 20px;
+
+padding: 20px;
+
+max-width: 440px;
+
+margin: 0 auto;
+
+text-align: center;
+
+box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+
+box-sizing: border-box;
+
+">
+
+<h3 style="margin: 0 0 10px 0; font-size: 1.3rem; color: #34D399;">👾 8-BIT MIDI PLAYER 👾</h3>
+
+<p style="font-size: 0.8rem; color: #9CA3AF; margin-bottom: 15px;">MIDIファイルを8bitピコピコ音で再生</p>
+
+
+
+<!-- ファイル選択 -->
+
+<input type="file" id="midiInput" accept=".mid,.midi" style="display: none;" onchange="handleFile(this.files)">
+
+<label for="midiInput" style="
+
+background: #059669;
+
+color: white;
+
+padding: 8px 16px;
+
+border-radius: 8px;
+
+cursor: pointer;
+
+font-size: 0.9rem;
+
+font-weight: bold;
+
+display: inline-block;
+
+margin-bottom: 12px;
+
+">📁 MIDIファイルを選択</label>
+
+
+
+<!-- 曲名表示エリア -->
+
+<div style="
+
+background: #000;
+
+border: 1px solid #059669;
+
+border-radius: 8px;
+
+padding: 8px 12px;
+
+margin-bottom: 15px;
+
+text-align: left;
+
+">
+
+<div style="font-size: 0.7rem; color: #9CA3AF; margin-bottom: 2px;">🎵 TITLE</div>
+
+<div id="songTitle" style="
+
+font-size: 0.95rem;
+
+color: #34D399;
+
+font-weight: bold;
+
+height: 1.3em;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+
+white-space: nowrap;
+
+">----</div>
+
+</div>
+
+
+
+<!-- 操作ボタン -->
+
+<div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
+
+<button id="playBtn" onclick="playMidi()" disabled style="background: #374151; color: #9CA3AF; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">再生 ▶</button>
+
+<button id="stopBtn" onclick="stopMidi()" disabled style="background: #374151; color: #9CA3AF; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">停止 ⏹</button>
+
+</div>
+
+
+
+<!-- ステータス/アニメーション -->
+
+<div id="visualizer" style="
+
+background: #000;
+
+height: 40px;
+
+border-radius: 8px;
+
+border: 1px solid #059669;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+gap: 4px;
+
+padding: 0 10px;
+
+">
+
+<div class="bar" style="width: 8px; height: 10%; background: #10B981;"></div>
+
+<div class="bar" style="width: 8px; height: 10%; background: #10B981;"></div>
+
+<div class="bar" style="width: 8px; height: 10%; background: #10B981;"></div>
+
+<div class="bar" style="width: 8px; height: 10%; background: #10B981;"></div>
+
+<div class="bar" style="width: 8px; height: 10%; background: #10B981;"></div>
+
+</div>
+
+</div>
+
+
+
+<!-- MIDI解析用軽量ライブラリ -->
+
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi"></script>
+
+
+
+<script>
+
+let midiData = null;
+
+let audioCtx = null;
+
+let activeNodes = [];
+
+let isPlaying = false;
+
+let playTimeouts = [];
+
+let animInterval = null;
+
+
+
+function initAudio() {
+
+if (!audioCtx) {
+
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+}
+
+}
+
+
+
+function handleFile(files) {
+
+if (!files.length) return;
+
+const file = files[0];
+
+
+
+const reader = new FileReader();
+
+reader.onload = function(e) {
+
+midiData = new Midi(e.target.result);
+
+
+
+// MIDIヘッダーの曲名を取得、なければ最初のトラック名、それも無ければファイル名から取得
+
+let title = midiData.name;
+
+if (!title && midiData.tracks.length > 0) {
+
+title = midiData.tracks[0].name;
+
+}
+
+if (!title || title.trim() === '') {
+
+title = file.name.replace(/\.[^/.]+$/, ""); // 拡張子を除去
+
+}
+
+
+
+document.getElementById('songTitle').innerText = title;
+
+
+
+document.getElementById('playBtn').disabled = false;
+
+document.getElementById('playBtn').style.background = '#10B981';
+
+document.getElementById('playBtn').style.color = '#000';
+
+};
+
+reader.readAsArrayBuffer(file);
+
+}
+
+
+
+function playMidi() {
+
+if (!midiData || isPlaying) return;
+
+initAudio();
+
+if (audioCtx.state === 'suspended') audioCtx.resume();
+
+
+
+stopMidi();
+
+isPlaying = true;
+
+
+
+document.getElementById('stopBtn').disabled = false;
+
+document.getElementById('stopBtn').style.background = '#EF4444';
+
+document.getElementById('stopBtn').style.color = '#FFF';
+
+
+
+startVisualizer();
+
+
+
+const now = audioCtx.currentTime;
+
+
+
+midiData.tracks.forEach(track => {
+
+track.notes.forEach(note => {
+
+const startTime = now + note.time;
+
+const duration = note.duration;
+
+
+
+const timeoutId = setTimeout(() => {
+
+if (!isPlaying) return;
+
+
+
+if (track.channel === 9) {
+
+playNoise(note.duration);
+
+} else {
+
+playSquareWave(note.midi, note.duration, note.velocity);
+
+}
+
+}, note.time * 1000);
+
+
+
+playTimeouts.push(timeoutId);
+
+});
+
+});
+
+}
+
+
+
+function playSquareWave(midiNote, duration, velocity) {
+
+if (!isPlaying) return;
+
+
+
+const osc = audioCtx.createOscillator();
+
+const gain = audioCtx.createGain();
+
+
+
+const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
+
+
+
+osc.type = 'square';
+
+osc.frequency.value = freq;
+
+
+
+const vol = (velocity || 0.7) * 0.15;
+
+gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+
+gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + Math.min(duration, 0.4));
+
+
+
+osc.connect(gain);
+
+gain.connect(audioCtx.destination);
+
+
+
+osc.start();
+
+osc.stop(audioCtx.currentTime + Math.min(duration, 0.4));
+
+
+
+activeNodes.push(osc);
+
+}
+
+
+
+function playNoise(duration) {
+
+if (!isPlaying) return;
+
+
+
+const bufferSize = audioCtx.sampleRate * 0.05;
+
+const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+
+const data = buffer.getChannelData(0);
+
+for (let i = 0; i < bufferSize; i++) {
+
+data[i] = Math.random() * 2 - 1;
+
+}
+
+
+
+const noise = audioCtx.createBufferSource();
+
+noise.buffer = buffer;
+
+
+
+const gain = audioCtx.createGain();
+
+gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+
+
+
+noise.connect(gain);
+
+gain.connect(audioCtx.destination);
+
+
+
+noise.start();
+
+}
+
+
+
+function stopMidi() {
+
+isPlaying = false;
+
+playTimeouts.forEach(t => clearTimeout(t));
+
+playTimeouts = [];
+
+
+
+activeNodes.forEach(node => {
+
+try { node.stop(); } catch(e) {}
+
+});
+
+activeNodes = [];
+
+
+
+document.getElementById('stopBtn').disabled = true;
+
+document.getElementById('stopBtn').style.background = '#374151';
+
+document.getElementById('stopBtn').style.color = '#9CA3AF';
+
+
+
+stopVisualizer();
+
+}
+
+
+
+function startVisualizer() {
+
+const bars = document.querySelectorAll('.bar');
+
+animInterval = setInterval(() => {
+
+bars.forEach(bar => {
+
+const h = Math.floor(Math.random() * 80) + 10;
+
+bar.style.height = h + '%';
+
+});
+
+}, 100);
+
+}
+
+
+
+function stopVisualizer() {
+
+clearInterval(animInterval);
+
+const bars = document.querySelectorAll('.bar');
+
+bars.forEach(bar => bar.style.height = '10%');
+
+}
+
+</script>
+
+midiフ２
+
+<div style="
+
+background: #008080;
+
+color: #000;
+
+font-family: 'MS UI Gothic', 'Segoe UI', sans-serif;
+
+border: 3px outset #fff;
+
+padding: 15px;
+
+max-width: 550px;
+
+margin: 0 auto;
+
+box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+
+box-sizing: border-box;
+
+">
+
+<!-- Windows 98/2000風 ウィンドウヘッダー -->
+
+<div style="background: linear-gradient(90deg, #000080, #1084d0); color: #fff; padding: 4px 8px; font-weight: bold; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+
+<span>Microsoft GS Wavetable みたいな Player</span>
+
+<span style="background: #c0c0c0; color: #000; border: 1px outset #fff; padding: 0 4px; font-size: 0.7rem;">✕</span>
+
+</div>
+
+
+
+<div style="background: #c0c0c0; border: 2px groove #fff; padding: 12px; border-radius: 2px;">
+
+<!-- ファイル選択 -->
+
+<div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+
+<label style="font-size: 0.85rem; font-weight: bold;">MIDI File:</label>
+
+<input type="file" id="midiInput" accept=".mid,.midi" style="font-size: 0.8rem; background: #fff; border: 1px inset #888; padding: 2px;">
+
+</div>
+
+
+
+<!-- コントロールボタン -->
+
+<div style="display: flex; gap: 10px; margin-bottom: 12px;">
+
+<button id="playBtn" onclick="playMIDI()" style="background: #c0c0c0; border: 2px outset #fff; padding: 6px 16px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">▶ 再生</button>
+
+<button id="stopBtn" onclick="stopMIDI()" style="background: #c0c0c0; border: 2px outset #fff; padding: 6px 16px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">■ 停止</button>
+
+</div>
+
+
+
+<!-- ステータス表示 -->
+
+<div style="background: #000; color: #00ff00; font-family: monospace; padding: 8px; border: 2px inset #888; font-size: 0.8rem; height: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+
+<span id="statusText">READY...</span>
+
+<span id="timeText">00:00</span>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@tonejs/midi"></script>
+
+
+
+<script>
+
+let audioCtx = null;
+
+let currentMidi = null;
+
+let isPlaying = false;
+
+let startTime = 0;
+
+let schedulerTimer = null;
+
+let allNotes = [];
+
+let noteIndex = 0;
+
+
+
+function initAudio() {
+
+if (!audioCtx) {
+
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+}
+
+}
+
+
+
+document.getElementById('midiInput').addEventListener('change', async (e) => {
+
+const file = e.target.files[0];
+
+if (!file) return;
+
+
+
+const arrayBuffer = await file.arrayBuffer();
+
+currentMidi = new Midi(arrayBuffer);
+
+
+// 全トラックの全ノートを一つの配列にまとめて時間順に並べ替え
+
+allNotes = [];
+
+currentMidi.tracks.forEach(track => {
+
+const isDrum = track.channel === 9;
+
+const progNum = track.instrument.number || 0;
+
+track.notes.forEach(note => {
+
+allNotes.push({
+
+time: note.time,
+
+midi: note.midi,
+
+duration: note.duration,
+
+velocity: note.velocity,
+
+progNum: progNum,
+
+isDrum: isDrum
+
+});
+
+});
+
+});
+
+allNotes.sort((a, b) => a.time - b.time);
+
+
+
+document.getElementById('statusText').innerText = `Loaded: ${file.name.substring(0, 18)}...`;
+
+});
+
+
+
+// 軽量MS GS音源生成
+
+function triggerGSNote(note, targetTime) {
+
+const freq = 440 * Math.pow(2, (note.midi - 69) / 12);
+
+const vol = note.velocity * 0.2;
+
+
+
+if (note.isDrum) {
+
+const osc = audioCtx.createOscillator();
+
+const gain = audioCtx.createGain();
+
+
+if (note.midi === 35 || note.midi === 36) { // Kick
+
+osc.type = 'sine';
+
+osc.frequency.setValueAtTime(120, targetTime);
+
+osc.frequency.exponentialRampToValueAtTime(30, targetTime + 0.1);
+
+gain.gain.setValueAtTime(vol * 1.2, targetTime);
+
+gain.gain.exponentialRampToValueAtTime(0.001, targetTime + 0.1);
+
+} else { // Snare / HiHat
+
+osc.type = 'triangle';
+
+osc.frequency.setValueAtTime(note.midi > 40 ? 7000 : 250, targetTime);
+
+gain.gain.setValueAtTime(vol, targetTime);
+
+gain.gain.exponentialRampToValueAtTime(0.001, targetTime + 0.08);
+
+}
+
+
+osc.connect(gain);
+
+gain.connect(audioCtx.destination);
+
+osc.start(targetTime);
+
+osc.stop(targetTime + 0.12);
+
+return;
+
+}
+
+
+
+const osc1 = audioCtx.createOscillator();
+
+const osc2 = audioCtx.createOscillator();
+
+const gain = audioCtx.createGain();
+
+const filter = audioCtx.createBiquadFilter();
+
+
+
+if (note.progNum >= 16 && note.progNum <= 23) { // Organ
+
+osc1.type = 'square'; osc2.type = 'sine';
+
+filter.type = 'lowpass'; filter.frequency.setValueAtTime(2000, targetTime);
+
+} else if (note.progNum >= 24 && note.progNum <= 31) { // Guitar
+
+osc1.type = 'sawtooth'; osc2.type = 'triangle';
+
+filter.type = 'lowpass'; filter.frequency.setValueAtTime(1500, targetTime);
+
+} else if (note.progNum >= 32 && note.progNum <= 39) { // Bass
+
+osc1.type = 'sawtooth'; osc2.type = 'sine';
+
+filter.type = 'lowpass'; filter.frequency.setValueAtTime(600, targetTime);
+
+} else { // Piano / Synth / Other
+
+osc1.type = 'triangle'; osc2.type = 'sawtooth';
+
+fi 
