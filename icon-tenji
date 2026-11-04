@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>アイコン展示 - レコード帯スタイル</title>
+    <style>
+        body {
+            background-color: #e0e0e0;
+            color: #111;
+            font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* 帯（オビ）風のコンテナ */
+        .obi-container {
+            background-color: #ff007f; /* アルファのピンク帯風カラー */
+            color: #fff;
+            width: 320px;
+            padding: 20px 15px;
+            box-shadow: 4px 4px 15px rgba(0,0,0,0.3);
+            border-left: 6px solid #fff;
+            border-right: 6px solid #fff;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        /* 上部の黄色い告知ボックス風 */
+        .notice-box {
+            background-color: #ffee00;
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 8px;
+            margin-bottom: 15px;
+            text-align: left;
+            border: 2px dashed #000;
+            line-height: 1.4;
+        }
+
+        /* アルファロゴ風テキスト */
+        .alfa-logo {
+            font-weight: 900;
+            font-style: italic;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        /* メインタイトル（縦書き風のレイアウト） */
+        .main-title {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            margin: 15px 0;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            margin-left: auto;
+            margin-right: auto;
+            height: 140px;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        /* 画像ガード用ラッパー */
+        .icon-wrap {
+            position: relative;
+            display: inline-block;
+            width: 180px;
+            height: 180px;
+            margin: 10px 0;
+            background: #fff;
+            padding: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .icon-wrap img.real-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            -webkit-user-drag: none;
+            -webkit-touch-callout: none;
+            user-select: none;
+            display: block;
+        }
+
+        /* 透明なダミー画像を上に重ねて保存を防ぐ */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+        }
+
+        /* フッター情報風 */
+        .footer-info {
+            font-size: 10px;
+            border-top: 1px solid rgba(255,255,255,0.4);
+            margin-top: 15px;
+            padding-top: 10px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .barcode-area {
+            background: #fff;
+            color: #000;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 5px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="obi-container">
+        <!-- 上部の黄色い注意書き風エリア -->
+        <div class="notice-box">
+            THANK YOU! ART<br>
+            ・無断転載禁止！★友達が描いてくれたアイコン！
+        </div>
+
+        <div class="alfa-logo">alfa</div>
+
+        <!-- アイコン表示エリア -->
+        <div class="icon-wrap">
+            <!-- icon.png の部分を実際の画像ファイル名に変えてな -->
+            <img src="icon.png" alt="池崎亮介のアイコン" class="real-icon">
+            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="overlay" alt="">
+        </div>
+
+        <div class="main-title">
+            池崎亮介アイコン
+        </div>
+
+        <div class="footer-info">
+            <div>SPECIAL THANKS / FRIEND</div>
+            <div>FRND-THNK / STEREO</div>
+            <div class="barcode-area">
+                0 000000 000000
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 右クリックを禁止
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+            }
+        });
+
+        // ドラッグ開始を禁止
+        document.addEventListener('dragstart', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+            }
+        });
+    </script>
+
+</body>
+</html>
