@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モダン・スライドパズルゲーム</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        /* Custom smooth transition for tiles */
+        .tile {
+            transition: transform 0.15s ease-in-out, background-color 0.2s, box-shadow 0.2s;
+        }
+        .tile:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Section -->
+    <header class="w-full py-6 px-4 text-center border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md">
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            SLIDE PUZZLE
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">数字を順番に並べ替えてクリアを目指そう！</p>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-lg mx-auto w-full">
+        
+        <!-- Score & Status Board -->
+        <div class="grid grid-cols-2 gap-4 w-full mb-6">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 text-center shadow-lg">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">移動回数 (Moves)</span>
+                <div id="move-count" class="text-3xl font-bold text-indigo-400 mt-1">0</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 text-center shadow-lg">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">タイム (Time)</span>
+                <div id="timer" class="text-3xl font-bold text-pink-400 mt-1">00:00</div>
+            </div>
+        </div>
+
+        <!-- Mode & Difficulty Selector -->
+        <div class="flex flex-col gap-3 w-full mb-6">
+            <!-- Grid Size Selector -->
+            <div class="flex bg-slate-900/80 border border-slate-800 rounded-xl p-1 w-full shadow-md">
+                <button onclick="setGridSize(3)" id="btn-3x3" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-400 hover:text-white">3 × 3</button>
+                <button onclick="setGridSize(4)" id="btn-4x4" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all bg-indigo-600 text-white shadow">4 × 4</button>
+                <button onclick="setGridSize(5)" id="btn-5x5" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-400 hover:text-white">5 × 5</button>
+            </div>
+
+            <!-- Image Mode Controls -->
+            <div class="flex items-center gap-3">
+                <label class="flex-1 cursor-pointer bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 flex items-center justify-center gap-2 shadow transition-all">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span id="upload-label-text">画像を選ぶ</span>
+                    <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                </label>
+                <button onclick="resetToNumberMode()" id="btn-mode-number" class="px-4 py-2.5 bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all shadow hidden">
+                    数字に戻す
+                </button>
+            </div>
+        </div>
+
+        <!-- Puzzle Grid Board -->
+        <div class="relative w-full aspect-square bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-4 shadow-2xl backdrop-blur-sm">
+            <div id="puzzle-grid" class="w-full h-full grid gap-2 sm:gap-3">
+                <!-- Tiles injected via JS -->
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="flex items-center gap-4 mt-6 w-full">
+            <button onclick="initGame()" class="flex-1 py-3 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                シャッフル / リセット
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Clear Modal / Notification Box -->
+    <div id="clear-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 class="text-2xl font-extrabold text-white">クリアおめでとう！</h2>
+            <p class="text-slate-400 text-sm mt-1">素晴らしいスピードでパズルを解き明かしました！</p>
+            
+            <div class="bg-slate-950/50 rounded-2xl p-4 my-6 border border-slate-800/80 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">最終タイム:</span>
+                    <span id="final-time" class="font-bold text-pink-400">00:00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">移動回数:</span>
+                    <span id="final-moves" class="font-bold text-indigo-400">0</span>
+                </div>
+            </div>
+
+            <button onclick="closeModalAndRestart()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all">
+                もう一度遊ぶ
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full py-4 text-center text-xs text-slate-500 border-t border-slate-900">
+        &copy; Modern Slide Puzzle Game. Enjoy & Have Fun!
+    </footer>
+
+    <!-- Game Logic JavaScript -->
+    <script>
+        // Game State Variables
+        let gridSize = 4; // Default 4x4
+        let tiles = [];   // Array holding original numbers/indices (0 represents empty slot)
+        let emptyIndex = 0;
+        let moveCount = 0;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let isPlaying = false;
+        let isCompleted = false;
+
+        // Custom Image Mode State
+        let customImageObj = null; // Image object if uploaded
+        let isImageMode = false;
+
+        // DOM Elements
+        const gridElement = document.getElementById('puzzle-grid');
+        const moveCountElement = document.getElementById('move-count');
+        const timerElement = document.getElementById('timer');
+        const clearModal = document.getElementById('clear-modal');
+        const modalContent = document.getElementById('modal-content');
+        const finalTimeElement = document.getElementById('final-time');
+        const finalMovesElement = document.getElementById('final-moves');
+        const uploadLabelText = document.getElementById('upload-label-text');
+        const btnModeNumber = document.getElementById('btn-mode-number');
+
+        // Set Grid Size (3x3, 4x4, 5x5)
+        function setGridSize(size) {
+            gridSize = size;
+            // Update UI buttons
+            [3, 4, 5].forEach(s => {
+                const btn = document.getElementById(`btn-${s}x${s}`);
+                if (s === size) {
+                    btn.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all bg-indigo-600 text-white shadow";
+                } else {
+                    btn.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-400 hover:text-white";
+                }
+            });
+            initGame();
+        }
+
+        // Handle Image Upload from Local File
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    customImageObj = img;
+                    isImageMode = true;
+                    uploadLabelText.textContent = "画像変更";
+                    btnModeNumber.classList.remove('hidden');
+                    initGame();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Reset to standard number mode
+        function resetToNumberMode() {
+            customImageObj = null;
+            isImageMode = false;
+            uploadLabelText.textContent = "画像を選ぶ";
+            btnModeNumber.classList.add('hidden');
+            document.getElementById('image-upload').value = '';
+            initGame();
+        }
+
+        // Initialize or Reset Game
+        function initGame() {
+            stopTimer();
+            timerSeconds = 0;
+            moveCount = 0;
+            isPlaying = false;
+            isCompleted = false;
+            updateDisplay();
+
+            // Set grid columns/rows dynamically
+            gridElement.style.gridTemplateColumns = `repeat(${gridSize}, minmax(0, 1fr))`;
+            gridElement.style.gridTemplateRows = `repeat(${gridSize}, minmax(0, 1fr))`;
+
+            const totalTiles = gridSize * gridSize;
+            tiles = Array.from({ length: totalTiles }, (_, i) => i);
+            emptyIndex = totalTiles - 1; // Empty starts at bottom-right
+
+            // Shuffle with solvable guarantee
+            shuffleSolvable();
+            renderBoard();
+        }
+
+        // Ensure the generated board is solvable
+        function shuffleSolvable() {
+            do {
+                for (let i = tiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+                }
+                emptyIndex = tiles.indexOf(0);
+            } while (!isSolvable() || isWinningState());
+        }
+
+        // Check if the puzzle layout is solvable
+        function isSolvable() {
+            let inversions = 0;
+            const flatTiles = tiles.filter(t => t !== 0);
+            for (let i = 0; i < flatTiles.length; i++) {
+                for (let j = i + 1; j < flatTiles.length; j++) {
+                    if (flatTiles[i] > flatTiles[j]) inversions++;
+                }
+            }
+
+            if (gridSize % 2 === 1) {
+                return inversions % 2 === 0;
+            } else {
+                const emptyRowFromBottom = gridSize - Math.floor(emptyIndex / gridSize);
+                if (emptyRowFromBottom % 2 === 1) {
+                    return inversions % 2 === 0;
+                } else {
+                    return inversions % 2 !== 0;
+                }
+            }
+        }
+
+        // Check if current state matches the winning condition
+        function isWinningState() {
+            for (let i = 0; i < tiles.length - 1; i++) {
+                if (tiles[i] !== i + 1) return false;
+            }
+            return tiles[tiles.length - 1] === 0;
+        }
+
+        // Render Tiles on Board
+        function renderBoard() {
+            gridElement.innerHTML = '';
+            
+            // If in image mode, prepare a temporary off-screen canvas to slice the uploaded image
+            let tileCanvasSize = 0;
+            let ctx = null;
+            if (isImageMode && customImageObj) {
+                tileCanvasSize = 300; // Resolution base for slices
+            }
+
+            tiles.forEach((value, index) => {
+                const tile = document.createElement('div');
+                tile.className = "tile rounded-xl flex items-center justify-center font-bold text-xl sm:text-2xl lg:text-3xl select-none cursor-pointer overflow-hidden relative";
+                
+                if (value === 0) {
+                    // Empty slot
+                    tile.classList.add('bg-slate-950/20', 'border', 'border-dashed', 'border-slate-800/50');
+                } else {
+                    if (isImageMode && customImageObj) {
+                        // Render image slice corresponding to the correct original position (value - 1)
+                        const origPos = value - 1;
+                        const origRow = Math.floor(origPos / gridSize);
+                        const origCol = origPos % gridSize;
+
+                        const canvas = document.createElement('canvas');
+                        const sz = 150;
+                        canvas.width = sz;
+                        canvas.height = sz;
+                        const tCtx = canvas.getContext('2d');
+
+                        // Crop source image proportionally
+                        const img = customImageObj;
+                        const minDim = Math.min(img.width, img.height);
+                        const startX = (img.width - minDim) / 2;
+                        const startY = (img.height - minDim) / 2;
+                        
+                        const sliceSize = minDim / gridSize;
+                        tCtx.drawImage(
+                            img,
+                            startX + origCol * sliceSize, startY + origRow * sliceSize, sliceSize, sliceSize,
+                            0, 0, sz, sz
+                        );
+
+                        const slicedImg = document.createElement('img');
+                        slicedImg.src = canvas.toDataURL();
+                        slicedImg.className = "w-full h-full object-cover pointer-events-none";
+                        tile.appendChild(slicedImg);
+
+                        // Optional subtle number badge on image tile for clarity
+                        const badge = document.createElement('span');
+                        badge.className = "absolute bottom-1 right-1 bg-slate-950/70 text-slate-200 text-[10px] px-1.5 py-0.5 rounded-md font-mono backdrop-blur-sm";
+                        badge.textContent = value;
+                        tile.appendChild(badge);
+
+                        tile.classList.add('border', 'border-slate-700/80', 'shadow-md', 'hover:border-indigo-500/50');
+                    } else {
+                        // Standard Number Tile
+                        tile.classList.add('bg-gradient-to-br', 'from-slate-800', 'to-slate-900', 'border', 'border-slate-700/80', 'text-slate-100', 'shadow-md', 'hover:border-indigo-500/50', 'hover:from-slate-700');
+                        tile.textContent = value;
+                    }
+                    
+                    // Click event to move tile
+                    tile.addEventListener('click', () => handleTileClick(index));
+                }
+                gridElement.appendChild(tile);
+            });
+        }
+
+        // Handle Tile Click / Tap
+        function handleTileClick(index) {
+            if (isCompleted) return;
+
+            // Start timer on first move
+            if (!isPlaying) {
+                startTimer();
+                isPlaying = true;
+            }
+
+            if (canMove(index)) {
+                // Swap clicked tile with empty slot
+                [tiles[emptyIndex], tiles[index]] = [tiles[index], tiles[emptyIndex]];
+                emptyIndex = index;
+                moveCount++;
+                updateDisplay();
+                renderBoard();
+
+                // Check win condition
+                if (isWinningState()) {
+                    handleWin();
+                }
+            }
+        }
+
+        // Check if tile can move into empty space (adjacent check)
+        function canMove(index) {
+            const row = Math.floor(index / gridSize);
+            const col = index % gridSize;
+            const emptyRow = Math.floor(emptyIndex / gridSize);
+            const emptyCol = emptyIndex % gridSize;
+
+            return (Math.abs(row - emptyRow) + Math.abs(col - emptyCol)) === 1;
+        }
+
+        // Timer Functions
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                updateDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        // Format Seconds to MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        // Update Screen Elements
+        function updateDisplay() {
+            moveCountElement.textContent = moveCount;
+            timerElement.textContent = formatTime(timerSeconds);
+        }
+
+        // Handle Victory
+        function handleWin() {
+            isCompleted = true;
+            stopTimer();
+            finalTimeElement.textContent = formatTime(timerSeconds);
+            finalMovesElement.textContent = moveCount;
+
+            clearModal.classList.remove('hidden');
+            setTimeout(() => {
+                clearModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        // Close Modal and restart
+        function closeModalAndRestart() {
+            clearModal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                clearModal.classList.add('hidden');
+                initGame();
+            }, 300);
+        }
+
+        // Keyboard Support (Arrow keys to slide tiles)
+        window.addEventListener('keydown', (e) => {
+            if (isCompleted) return;
+            let targetIndex = -1;
+            const emptyRow = Math.floor(emptyIndex / gridSize);
+            const emptyCol = emptyIndex % gridSize;
+
+            if (e.key === 'ArrowUp' && emptyRow < gridSize - 1) {
+                targetIndex = emptyIndex + gridSize;
+            } else if (e.key === 'ArrowDown' && emptyRow > 0) {
+                targetIndex = emptyIndex - gridSize;
+            } else if (e.key === 'ArrowLeft' && emptyCol < gridSize - 1) {
+                targetIndex = emptyIndex + 1;
+            } else if (e.key === 'ArrowRight' && emptyCol > 0) {
+                targetIndex = emptyIndex - 1;
+            }
+
+            if (targetIndex !== -1) {
+                handleTileClick(targetIndex);
+            }
+        });
+
+        // Initialize game on load
+        window.onload = () => {
+            initGame();
+        };
+    </script>
+</body>
+</html>
+```
+### 追加機能のポイント
+- **「画像を選ぶ」ボタン**: ローカルの画像ファイルを選択すると自動的に正方形にトリミングされ、パズルの各ピースに分割されてスライドパズルとして遊べるようになります。
+- **いつでも数字モードに戻せる**: 「数字に戻す」ボタンを押せば、通常の数字パズルにいつでも切り替えられます。
+- **安心の解法保証**: どの画像を使っても必ずクリア可能な配置にシャッフルされるため、ストレスなく楽しめます。
